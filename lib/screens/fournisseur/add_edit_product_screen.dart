@@ -38,6 +38,11 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
   final _promoStartController = TextEditingController();
   final _promoEndController = TextEditingController();
 
+  // 👇 NOUVEAUX CONTROLEURS POUR LE STOCK
+  final _stockQuantityController = TextEditingController();
+  final _minStockAlertController = TextEditingController();
+  final _maxStockAlertController = TextEditingController();
+
   File? _imageFile;
   final picker = ImagePicker();
 
@@ -50,6 +55,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
   @override
   void initState() {
     super.initState();
+
     // Forcer le chargement des catégories
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final productService = Provider.of<ProductService>(context, listen: false);
@@ -58,8 +64,9 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
       }
     });
 
-
+    // Initialisation des valeurs
     if (widget.product != null) {
+      // Produit existant
       _nameController.text = widget.product!.name;
       _descriptionController.text = widget.product!.description ?? '';
       _priceController.text = widget.product!.listPrice.toString();
@@ -67,6 +74,12 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
       _codeController.text = widget.product!.defaultCode ?? '';
       _selectedCategoryId = widget.product!.categoryId;
       _isPromotion = widget.product!.isPromotion;
+
+      // 👇 INITIALISATION DES VALEURS DE STOCK
+      _stockQuantityController.text = widget.product!.stockQuantity?.toString() ?? '0';
+      _minStockAlertController.text = widget.product!.minStockAlert?.toString() ?? '5';
+      _maxStockAlertController.text = widget.product!.maxStockAlert?.toString() ?? '100';
+
       if (widget.product!.promotionPrice != null) {
         _promoPriceController.text = widget.product!.promotionPrice!.toString();
       }
@@ -78,6 +91,11 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
         _promoEndController.text =
         '${widget.product!.promotionEnd!.year}-${widget.product!.promotionEnd!.month.toString().padLeft(2, '0')}-${widget.product!.promotionEnd!.day.toString().padLeft(2, '0')}';
       }
+    } else {
+      // Nouveau produit - valeurs par défaut
+      _stockQuantityController.text = '0';
+      _minStockAlertController.text = '5';
+      _maxStockAlertController.text = '100';
     }
   }
 
@@ -91,6 +109,10 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
     _promoPriceController.dispose();
     _promoStartController.dispose();
     _promoEndController.dispose();
+    // 👇 DISPOSE DES NOUVEAUX CONTROLEURS
+    _stockQuantityController.dispose();
+    _minStockAlertController.dispose();
+    _maxStockAlertController.dispose();
     _newCategoryController.dispose();
     super.dispose();
   }
@@ -179,16 +201,12 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
       bool granted = false;
 
       if (Platform.isAndroid) {
-        // Essayer d'abord Permission.storage
         if (await Permission.storage.request().isGranted) {
           granted = true;
-        }
-        // Sinon essayer Permission.photos (Android 13+)
-        else if (await Permission.photos.request().isGranted) {
+        } else if (await Permission.photos.request().isGranted) {
           granted = true;
         }
       } else {
-        // iOS
         granted = await Permission.photos.request().isGranted;
       }
 
@@ -255,7 +273,6 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
           content: Text(localizations.categoryAdded),
           backgroundColor: AppColors.success,
         ),
-
       );
       _newCategoryController.clear();
       Navigator.pop(context);
@@ -321,13 +338,42 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
     final result = await productService.uploadProductImage(productId, _imageFile!);
 
     if (result['success'] && mounted) {
-      await productService.loadProducts(reset: true);
+      await productService.loadSupplierProducts(reset: true);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(localizations.imageUploaded),
           backgroundColor: AppColors.success,
         ),
       );
+    }
+  }
+
+  // 👇 FONCTION POUR OBTENIR LE STATUT DU STOCK
+  Map<String, dynamic> _getStockStatus() {
+    int stock = int.tryParse(_stockQuantityController.text) ?? 0;
+    int minAlert = int.tryParse(_minStockAlertController.text) ?? 5;
+
+    if (stock <= 0) {
+      return {
+        'color': Colors.red,
+        'icon': Icons.error,
+        'status': 'Rupture de stock',
+        'message': 'Plus en stock'
+      };
+    } else if (stock <= minAlert) {
+      return {
+        'color': Colors.orange,
+        'icon': Icons.warning,
+        'status': 'Stock faible',
+        'message': 'Bientôt épuisé'
+      };
+    } else {
+      return {
+        'color': Colors.green,
+        'icon': Icons.check_circle,
+        'status': 'Stock suffisant',
+        'message': 'Disponible'
+      };
     }
   }
 
@@ -338,6 +384,11 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
 
     setState(() => _isLoading = true);
 
+    // Récupérer les valeurs de stock
+    int stockQuantity = int.tryParse(_stockQuantityController.text) ?? 0;
+    int minStockAlert = int.tryParse(_minStockAlertController.text) ?? 5;
+    int maxStockAlert = int.tryParse(_maxStockAlertController.text) ?? 100;
+
     final productData = {
       'name': _nameController.text,
       'description': _descriptionController.text.isEmpty ? null : _descriptionController.text,
@@ -346,6 +397,11 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
       'is_promotion': _isPromotion ? 1 : 0,
       'categ_id': _selectedCategoryId,
       'default_code': _codeController.text.isEmpty ? null : _codeController.text,
+
+      // 👇 AJOUT DES DONNÉES DE STOCK
+      'stock_quantity': stockQuantity,
+      'min_stock_alert': minStockAlert,
+      'max_stock_alert': maxStockAlert,
     };
 
     if (_isPromotion) {
@@ -383,7 +439,6 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
       );
       widget.onProductAdded();
 
-      // 👇 Petit délai de 100ms avant de fermer
       await Future.delayed(const Duration(milliseconds: 100));
 
       if (mounted) {
@@ -402,288 +457,170 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
   @override
   Widget build(BuildContext context) {
     final localizations = AppLocalizations.of(context)!;
+    final isArabic = Localizations.localeOf(context).languageCode == 'ar';
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 1,
-        title: Text(
-          widget.product == null ? localizations.addProduct : localizations.editProduct,
-          style: const TextStyle(
-            color: Color(0xFF2D3A4F),
-            fontWeight: FontWeight.bold,
+    return Directionality(
+      textDirection: isArabic ? TextDirection.rtl : TextDirection.ltr,
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 1,
+          title: Text(
+            widget.product == null ? localizations.addProduct : localizations.editProduct,
+            style: const TextStyle(
+              color: Color(0xFF2D3A4F),
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          leading: IconButton(
+            icon: Icon(
+              isArabic ? Icons.arrow_forward : Icons.arrow_back,
+              color: AppColors.textDark,
+            ),
+            onPressed: () => Navigator.pop(context),
           ),
         ),
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: AppColors.textDark),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Code produit
-              Text(
-                localizations.productCode,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF2D3A4F),
-                ),
-              ),
-              const SizedBox(height: 8),
-              TextFormField(
-                controller: _codeController,
-                decoration: InputDecoration(
-                  hintText: localizations.productCodeHint,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // Nom du produit
-              Text(
-                '${localizations.products} *',
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF2D3A4F),
-                ),
-              ),
-              const SizedBox(height: 8),
-              TextFormField(
-                controller: _nameController,
-                decoration: InputDecoration(
-                  hintText: localizations.productNameHint,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return localizations.fieldRequired;
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-
-              // Description
-              Text(
-                localizations.description,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF2D3A4F),
-                ),
-              ),
-              const SizedBox(height: 8),
-              TextFormField(
-                controller: _descriptionController,
-                maxLines: 3,
-                decoration: InputDecoration(
-                  hintText: localizations.descriptionHint,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // Catégorie
-              Text(
-                '${localizations.category} *',
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF2D3A4F),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: Consumer<ProductService>(
-                      builder: (context, productService, child) {
-                        // 👇 Vérifier si les catégories sont en cours de chargement
-                        if (productService.isLoading) {
-                          return const Center(
-                            child: SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            ),
-                          );
-                        }
-
-                        // 👇 Si pas de catégories, afficher un message
-                        if (productService.categories.isEmpty) {
-                          return Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-                            decoration: BoxDecoration(
-                              border: Border.all(color: Colors.grey.shade300),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Center(
-                              child: Text(
-                                'Aucune catégorie disponible',
-                                style: TextStyle(color: Colors.grey.shade600),
-                              ),
-                            ),
-                          );
-                        }
-
-                        return DropdownButtonFormField<int>(
-                          value: _selectedCategoryId,
-                          hint: Text(localizations.selectCategory),
-                          decoration: InputDecoration(
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                          items: productService.categories.map((category) {
-                            return DropdownMenuItem<int>(
-                              value: category.id,
-                              child: Text(category.name),
-                            );
-                          }).toList(),
-                          onChanged: (value) {
-                            setState(() {
-                              _selectedCategoryId = value;
-                            });
-                          },
-                          validator: (value) {
-                            if (value == null) {
-                              return localizations.fieldRequired;
-                            }
-                            return null;
-                          },
-                        );
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Container(
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey.shade300),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: IconButton(
-                      icon: Icon(Icons.add, color: AppColors.primary),
-                      onPressed: _showAddCategoryDialog,
-                      tooltip: localizations.addCategory,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              // Prix
-              Text(
-                localizations.price,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF2D3A4F),
-                ),
-              ),
-              const SizedBox(height: 8),
-              TextFormField(
-                controller: _priceController,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  hintText: '0.00',
-                  prefixIcon: Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Text(
-                      localizations.currency,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return localizations.fieldRequired;
-                  }
-                  if (double.tryParse(value) == null) {
-                    return localizations.invalidNumber;
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-
-              // Conditionnement (Quantité)
-              Text(
-                localizations.packaging,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF2D3A4F),
-                ),
-              ),
-              const SizedBox(height: 8),
-              TextFormField(
-                controller: _packagingController,
-                decoration: InputDecoration(
-                  hintText: localizations.packagingHint,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // Promotion
-              Row(
-                children: [
-                  Checkbox(
-                    value: _isPromotion,
-                    onChanged: (value) {
-                      setState(() {
-                        _isPromotion = value ?? false;
-                      });
-                    },
-                    activeColor: AppColors.primary,
-                  ),
-                  Text(
-                    localizations.inPromotion,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF2D3A4F),
-                    ),
-                  ),
-                ],
-              ),
-
-              if (_isPromotion) ...[
-                const SizedBox(height: 16),
-                // Prix promotionnel
-                Text(
-                  localizations.promotionPrice,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF2D3A4F),
-                  ),
-                ),
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Code produit
+                _buildLabel(localizations.productCode),
                 const SizedBox(height: 8),
                 TextFormField(
-                  controller: _promoPriceController,
+                  controller: _codeController,
+                  decoration: InputDecoration(
+                    hintText: localizations.productCodeHint,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Nom du produit
+                _buildLabel('${localizations.products} *'),
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: _nameController,
+                  decoration: InputDecoration(
+                    hintText: localizations.productNameHint,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return localizations.fieldRequired;
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+
+                // Description
+                _buildLabel(localizations.description),
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: _descriptionController,
+                  maxLines: 3,
+                  decoration: InputDecoration(
+                    hintText: localizations.descriptionHint,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Catégorie
+                _buildLabel('${localizations.category} *'),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Consumer<ProductService>(
+                        builder: (context, productService, child) {
+                          if (productService.isLoading) {
+                            return const Center(
+                              child: SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              ),
+                            );
+                          }
+
+                          if (productService.categories.isEmpty) {
+                            return Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                              decoration: BoxDecoration(
+                                border: Border.all(color: Colors.grey.shade300),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  'Aucune catégorie disponible',
+                                  style: TextStyle(color: Colors.grey.shade600),
+                                ),
+                              ),
+                            );
+                          }
+
+                          return DropdownButtonFormField<int>(
+                            value: _selectedCategoryId,
+                            hint: Text(localizations.selectCategory),
+                            decoration: InputDecoration(
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            items: productService.categories.map((category) {
+                              return DropdownMenuItem<int>(
+                                value: category.id,
+                                child: Text(category.name),
+                              );
+                            }).toList(),
+                            onChanged: (value) {
+                              setState(() {
+                                _selectedCategoryId = value;
+                              });
+                            },
+                            validator: (value) {
+                              if (value == null) {
+                                return localizations.fieldRequired;
+                              }
+                              return null;
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey.shade300),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: IconButton(
+                        icon: Icon(Icons.add, color: AppColors.primary),
+                        onPressed: _showAddCategoryDialog,
+                        tooltip: localizations.addCategory,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // Prix
+                _buildLabel(localizations.price),
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: _priceController,
                   keyboardType: TextInputType.number,
                   decoration: InputDecoration(
                     hintText: '0.00',
@@ -702,206 +639,448 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                     ),
                   ),
                   validator: (value) {
-                    if (_isPromotion && (value == null || value.isEmpty)) {
+                    if (value == null || value.isEmpty) {
                       return localizations.fieldRequired;
+                    }
+                    if (double.tryParse(value) == null) {
+                      return localizations.invalidNumber;
                     }
                     return null;
                   },
                 ),
                 const SizedBox(height: 16),
 
-                // Date début promotion
-                Text(
-                  localizations.promotionStart,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF2D3A4F),
-                  ),
-                ),
+                // Conditionnement
+                _buildLabel(localizations.packaging),
                 const SizedBox(height: 8),
                 TextFormField(
-                  controller: _promoStartController,
-                  readOnly: true,
-                  onTap: () => _selectDate(_promoStartController),
+                  controller: _packagingController,
                   decoration: InputDecoration(
-                    hintText: localizations.dateFormat,
-                    prefixIcon: const Icon(Icons.calendar_today),
+                    hintText: localizations.packagingHint,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
-                  validator: (value) {
-                    if (_isPromotion && (value == null || value.isEmpty)) {
-                      return localizations.fieldRequired;
-                    }
-                    return null;
-                  },
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 24),
 
-                // Date fin promotion
-                Text(
-                  localizations.promotionEnd,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF2D3A4F),
+                // ===== SECTION STOCK =====
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.blue.shade200),
                   ),
-                ),
-                const SizedBox(height: 8),
-                TextFormField(
-                  controller: _promoEndController,
-                  readOnly: true,
-                  onTap: () => _selectDate(_promoEndController),
-                  decoration: InputDecoration(
-                    hintText: localizations.dateFormat,
-                    prefixIcon: const Icon(Icons.calendar_today),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  validator: (value) {
-                    if (_isPromotion && (value == null || value.isEmpty)) {
-                      return localizations.fieldRequired;
-                    }
-                    return null;
-                  },
-                ),
-              ],
-
-              const SizedBox(height: 24),
-
-              // Section Image
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade50,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey.shade300),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      localizations.productImage,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF2D3A4F),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Center(
-                      child: Stack(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
                         children: [
-                          Container(
-                            width: 150,
-                            height: 150,
-                            decoration: BoxDecoration(
-                              color: Colors.grey.shade200,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.grey.shade400),
-                            ),
-                            child: _imageFile != null
-                                ? ClipRRect(
-                              borderRadius: BorderRadius.circular(12),
-                              child: Image.file(
-                                _imageFile!,
-                                fit: BoxFit.cover,
-                                width: 150,
-                                height: 150,
-                              ),
-                            )
-                                : (widget.product?.imageUrl != null
-                                ? ProductImage(
-                              productId: widget.product!.id,
-                              imageUrl: widget.product!.imageUrl,
-                              width: 150,
-                              height: 150,
-                              fit: BoxFit.cover,
-                            )
-                                : Icon(
-                              Icons.add_photo_alternate_outlined,
-                              size: 50,
-                              color: Colors.grey,
-                            )),
-                          ),
-                          Positioned(
-                            bottom: 5,
-                            right: 5,
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: AppColors.primary,
-                                shape: BoxShape.circle,
-                              ),
-                              child: IconButton(
-                                icon: const Icon(Icons.camera_alt, color: Colors.white, size: 20),
-                                onPressed: _showImageSourceBottomSheet,
-                                padding: const EdgeInsets.all(8),
-                                constraints: const BoxConstraints(),
-                              ),
+                          Icon(Icons.inventory, color: Colors.blue.shade700, size: 20),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Gestion de stock',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blue.shade900,
                             ),
                           ),
                         ],
                       ),
-                    ),
-                    if (_imageFile != null)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 8),
-                        child: Center(
-                          child: Text(
-                            '${localizations.selectedImage}: ${_imageFile!.path.split('/').last}',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: Colors.grey.shade600,
-                              fontStyle: FontStyle.italic,
+                      const SizedBox(height: 16),
+
+                      // Quantité en stock
+                      _buildLabel('Quantité en stock *'),
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        controller: _stockQuantityController,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          hintText: '0',
+                          prefixIcon: const Icon(Icons.inventory_2, size: 20),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          filled: true,
+                          fillColor: Colors.white,
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'La quantité en stock est requise';
+                          }
+                          if (int.tryParse(value) == null) {
+                            return 'Veuillez entrer un nombre valide';
+                          }
+                          if (int.parse(value) < 0) {
+                            return 'La quantité ne peut pas être négative';
+                          }
+                          return null;
+                        },
+                        onChanged: (_) => setState(() {}),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Seuil d'alerte minimum
+                      _buildLabel('Seuil d\'alerte minimum'),
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        controller: _minStockAlertController,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          hintText: '5',
+                          prefixIcon: const Icon(Icons.warning, size: 20),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          filled: true,
+                          fillColor: Colors.white,
+                          helperText: 'En dessous de ce seuil, une alerte sera affichée',
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) return null;
+                          if (int.tryParse(value) == null) {
+                            return 'Veuillez entrer un nombre valide';
+                          }
+                          return null;
+                        },
+                        onChanged: (_) => setState(() {}),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Stock maximum
+                      _buildLabel('Stock maximum'),
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        controller: _maxStockAlertController,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          hintText: '100',
+                          prefixIcon: const Icon(Icons.trending_up, size: 20),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          filled: true,
+                          fillColor: Colors.white,
+                          helperText: 'Quantité maximale recommandée',
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) return null;
+                          if (int.tryParse(value) == null) {
+                            return 'Veuillez entrer un nombre valide';
+                          }
+                          return null;
+                        },
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // Indicateur de stock
+                      Consumer<ProductService>(
+                        builder: (context, productService, child) {
+                          final stockStatus = _getStockStatus();
+
+                          return Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: stockStatus['color'].withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: stockStatus['color'].withOpacity(0.3)),
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                            child: Row(
+                              children: [
+                                Icon(
+                                  stockStatus['icon'],
+                                  color: stockStatus['color'],
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        stockStatus['status'],
+                                        style: TextStyle(
+                                          color: stockStatus['color'],
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      Text(
+                                        stockStatus['message'],
+                                        style: TextStyle(
+                                          color: stockStatus['color'].withOpacity(0.7),
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Text(
+                                  '${_stockQuantityController.text} en stock',
+                                  style: TextStyle(
+                                    color: stockStatus['color'],
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // Promotion
+                Row(
+                  children: [
+                    Checkbox(
+                      value: _isPromotion,
+                      onChanged: (value) {
+                        setState(() {
+                          _isPromotion = value ?? false;
+                        });
+                      },
+                      activeColor: AppColors.primary,
+                    ),
+                    Text(
+                      localizations.inPromotion,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF2D3A4F),
+                      ),
+                    ),
+                  ],
+                ),
+
+                if (_isPromotion) ...[
+                  const SizedBox(height: 16),
+                  // Prix promotionnel
+                  _buildLabel(localizations.promotionPrice),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: _promoPriceController,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      hintText: '0.00',
+                      prefixIcon: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Text(
+                          localizations.currency,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
                           ),
                         ),
                       ),
-                  ],
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    validator: (value) {
+                      if (_isPromotion && (value == null || value.isEmpty)) {
+                        return localizations.fieldRequired;
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Date début promotion
+                  _buildLabel(localizations.promotionStart),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: _promoStartController,
+                    readOnly: true,
+                    onTap: () => _selectDate(_promoStartController),
+                    decoration: InputDecoration(
+                      hintText: localizations.dateFormat,
+                      prefixIcon: const Icon(Icons.calendar_today),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    validator: (value) {
+                      if (_isPromotion && (value == null || value.isEmpty)) {
+                        return localizations.fieldRequired;
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Date fin promotion
+                  _buildLabel(localizations.promotionEnd),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: _promoEndController,
+                    readOnly: true,
+                    onTap: () => _selectDate(_promoEndController),
+                    decoration: InputDecoration(
+                      hintText: localizations.dateFormat,
+                      prefixIcon: const Icon(Icons.calendar_today),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    validator: (value) {
+                      if (_isPromotion && (value == null || value.isEmpty)) {
+                        return localizations.fieldRequired;
+                      }
+                      return null;
+                    },
+                  ),
+                ],
+
+                const SizedBox(height: 24),
+
+                // Section Image
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey.shade300),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        localizations.productImage,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF2D3A4F),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Center(
+                        child: Stack(
+                          children: [
+                            Container(
+                              width: 150,
+                              height: 150,
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade200,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.grey.shade400),
+                              ),
+                              child: _imageFile != null
+                                  ? ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: Image.file(
+                                  _imageFile!,
+                                  fit: BoxFit.cover,
+                                  width: 150,
+                                  height: 150,
+                                ),
+                              )
+                                  : (widget.product?.imageUrl != null
+                                  ? ProductImage(
+                                productId: widget.product!.id,
+                                imageUrl: widget.product!.imageUrl,
+                                width: 150,
+                                height: 150,
+                                fit: BoxFit.cover,
+                              )
+                                  : Icon(
+                                Icons.add_photo_alternate_outlined,
+                                size: 50,
+                                color: Colors.grey,
+                              )),
+                            ),
+                            Positioned(
+                              bottom: 5,
+                              right: 5,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: IconButton(
+                                  icon: const Icon(Icons.camera_alt, color: Colors.white, size: 20),
+                                  onPressed: _showImageSourceBottomSheet,
+                                  padding: const EdgeInsets.all(8),
+                                  constraints: const BoxConstraints(),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (_imageFile != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Center(
+                            child: Text(
+                              '${localizations.selectedImage}: ${_imageFile!.path.split('/').last}',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.grey.shade600,
+                                fontStyle: FontStyle.italic,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
-              ),
 
-              const SizedBox(height: 32),
+                const SizedBox(height: 32),
 
-              // Bouton sauvegarder
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _saveProduct,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                // Bouton sauvegarder
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton(
+                    onPressed: _isLoading ? null : _saveProduct,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: _isLoading
+                        ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                        : Text(
+                      widget.product == null ? localizations.add : localizations.save,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
-                  child: _isLoading
-                      ? const SizedBox(
-                    height: 20,
-                    width: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                    ),
-                  )
-                      : Text(
-                    widget.product == null ? localizations.add : localizations.save,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
+      ),
+    );
+  }
+
+  // Widget helper pour les labels
+  Widget _buildLabel(String text) {
+    return Text(
+      text,
+      style: const TextStyle(
+        fontSize: 14,
+        fontWeight: FontWeight.w600,
+        color: Color(0xFF2D3A4F),
       ),
     );
   }

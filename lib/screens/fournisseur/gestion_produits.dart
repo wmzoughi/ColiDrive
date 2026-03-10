@@ -282,7 +282,7 @@ class _GestionProduitsScreenState extends State<GestionProduitsScreen> {
           if (index == 0) {
             Navigator.pushReplacementNamed(context, '/supplier/dashboard');
           } else if (index == 1) {
-            // Navigator.pushNamed(context, '/supplier/orders');
+             Navigator.pushNamed(context, '/supplier/orders');
           } else if (index == 3) {
             Navigator.push(
               context,

@@ -13,6 +13,7 @@ import '../../widgets/bottom_nav_bar.dart';
 import '../../l10n/app_localizations.dart';
 import 'compte_screen.dart';
 import 'product_detail_screen.dart';
+import '../../widgets/cart_icon_with_badge.dart';
 
 class ProductsScreen extends StatefulWidget {
   const ProductsScreen({Key? key}) : super(key: key);
@@ -215,9 +216,10 @@ class _ProductsScreenState extends State<ProductsScreen> {
             ),
           ],
         ),
+
         actions: [
           IconButton(
-            icon: const Icon(Icons.shopping_cart_outlined, color: Color(0xFF2D3A4F)),
+            icon: CartIconWithBadge(), // 👈 Utilise le widget personnalisé
             onPressed: () => Navigator.pushNamed(context, '/merchant/cart'),
           ),
         ],
@@ -430,7 +432,9 @@ class _ProductsScreenState extends State<ProductsScreen> {
             Navigator.pushReplacementNamed(context, '/merchant/dashboard');
           } else if (index == 1) {
             Navigator.pushNamed(context, '/merchant/orders');
-          } else if (index == 3) {
+          } else if (index == 3) { // Panier
+            Navigator.pushNamed(context, '/merchant/cart');
+          } else if (index == 4) { // Compte
             Navigator.pushNamed(context, '/merchant/account');
           }
         },

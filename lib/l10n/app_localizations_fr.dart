@@ -216,7 +216,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get filterPending => 'En attente';
 
   @override
-  String get filterConfirmed => 'Validées';
+  String get filterConfirmed => 'Confirmées';
 
   @override
   String get filterDelivered => 'Livrées';
@@ -316,4 +316,188 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get errorOccurred => 'Une erreur est survenue';
+
+  @override
+  String get cart => 'Panier';
+
+  @override
+  String get checkoutTitle => 'Finaliser la commande';
+
+  @override
+  String get orderSummary => 'Récapitulatif de votre commande';
+
+  @override
+  String get itemsCount => 'article(s)';
+
+  @override
+  String get subtotal => 'Sous-total';
+
+  @override
+  String get tax => 'TVA (20%)';
+
+  @override
+  String get shipping => 'Frais de livraison';
+
+  @override
+  String get total => 'Total';
+
+  @override
+  String get shippingAddress => 'Adresse de livraison';
+
+  @override
+  String get address => 'Adresse';
+
+  @override
+  String get addressHint => 'Numéro et nom de rue';
+
+  @override
+  String get city => 'Ville';
+
+  @override
+  String get zipCode => 'Code postal';
+
+  @override
+  String get paymentMethod => 'Mode de paiement';
+
+  @override
+  String get cashOnDelivery => 'Paiement à la livraison (Espèces)';
+
+  @override
+  String get cashSubtitle => 'Payez en espèces à la réception';
+
+  @override
+  String get cardPayment => 'Carte bancaire';
+
+  @override
+  String get cardSubtitle => 'Payez par carte (CIB, MasterCard, Visa)';
+
+  @override
+  String get notes => 'Notes (optionnel)';
+
+  @override
+  String get notesHint => 'Instructions spéciales pour la livraison...';
+
+  @override
+  String get confirmOrder => 'Confirmer la commande';
+
+  @override
+  String get termsAccept =>
+      'En confirmant votre commande, vous acceptez nos conditions générales de vente.';
+
+  @override
+  String get orderSuccess => 'Commande créée avec succès! Numéro: ';
+
+  @override
+  String get orderError => 'Erreur lors de la création de la commande';
+
+  @override
+  String get addressRequired => 'L\'adresse est requise';
+
+  @override
+  String get cityRequired => 'La ville est requise';
+
+  @override
+  String get zipRequired => 'Le code postal est requis';
+
+  @override
+  String get phoneRequired => 'Le numéro de téléphone est requis';
+
+  @override
+  String get quantity => 'Quantité';
+
+  @override
+  String get addToCart => 'Ajouter au panier';
+
+  @override
+  String get confirmed => 'Confirmée';
+
+  @override
+  String get preparing => 'En préparation';
+
+  @override
+  String get delivering => 'En livraison';
+
+  @override
+  String get cancelled => 'Annulée';
+
+  @override
+  String get filterPreparing => 'En préparation';
+
+  @override
+  String get filterDelivering => 'En livraison';
+
+  @override
+  String get supplierOrders => 'Commandes fournisseur';
+
+  @override
+  String get client => 'Client';
+
+  @override
+  String get totalRevenue => 'Chiffre d\'affaires';
+
+  @override
+  String get moreProducts => 'autre(s) produit(s)';
+
+  @override
+  String get confirmOrderMessage => 'Voulez-vous confirmer la commande';
+
+  @override
+  String get orderConfirmed => 'Commande confirmée avec succès';
+
+  @override
+  String get cancelOrder => 'Annuler la commande';
+
+  @override
+  String get orderCancelled => 'Commande annulée';
+
+  @override
+  String get cancellationReason => 'Raison d\'annulation';
+
+  @override
+  String get cancellationReasonHint => 'Ex: Produit en rupture de stock';
+
+  @override
+  String get back => 'Retour';
+
+  @override
+  String get updateStatus => 'Mettre à jour le statut';
+
+  @override
+  String get updateStatusMessage => 'Marquer la commande comme';
+
+  @override
+  String get order => 'Commande';
+
+  @override
+  String get filterCancelled => 'Annulées';
+
+  @override
+  String get stockManagement => 'Gestion de stock';
+
+  @override
+  String get stockQuantity => 'Quantité en stock';
+
+  @override
+  String get minStockAlert => 'Seuil d\'alerte minimum';
+
+  @override
+  String get maxStockAlert => 'Stock maximum';
+
+  @override
+  String get stockSufficient => 'Stock suffisant';
+
+  @override
+  String get lowStock => 'Stock faible';
+
+  @override
+  String get outOfStock => 'Rupture de stock';
+
+  @override
+  String get inStock => 'en stock';
+
+  @override
+  String get available => 'Disponible';
+
+  @override
+  String get soonOut => 'Bientôt épuisé';
 }

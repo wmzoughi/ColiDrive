@@ -316,4 +316,188 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get errorOccurred => 'حدث خطأ';
+
+  @override
+  String get cart => 'السلة';
+
+  @override
+  String get checkoutTitle => 'إنهاء الطلب';
+
+  @override
+  String get orderSummary => 'ملخص طلبك';
+
+  @override
+  String get itemsCount => 'منتج/منتجات';
+
+  @override
+  String get subtotal => 'المجموع الفرعي';
+
+  @override
+  String get tax => 'الضريبة (20%)';
+
+  @override
+  String get shipping => 'تكلفة التوصيل';
+
+  @override
+  String get total => 'الإجمالي';
+
+  @override
+  String get shippingAddress => 'عنوان التوصيل';
+
+  @override
+  String get address => 'العنوان';
+
+  @override
+  String get addressHint => 'رقم واسم الشارع';
+
+  @override
+  String get city => 'المدينة';
+
+  @override
+  String get zipCode => 'الرمز البريدي';
+
+  @override
+  String get paymentMethod => 'طريقة الدفع';
+
+  @override
+  String get cashOnDelivery => 'الدفع عند الاستلام (نقداً)';
+
+  @override
+  String get cashSubtitle => 'ادفع نقداً عند الاستلام';
+
+  @override
+  String get cardPayment => 'بطاقة بنكية';
+
+  @override
+  String get cardSubtitle => 'ادفع ببطاقة (CIB, MasterCard, Visa)';
+
+  @override
+  String get notes => 'ملاحظات (اختياري)';
+
+  @override
+  String get notesHint => 'تعليمات خاصة للتوصيل...';
+
+  @override
+  String get confirmOrder => 'تأكيد الطلب';
+
+  @override
+  String get termsAccept =>
+      'بتأكيد طلبك، فإنك توافق على شروط البيع العامة لدينا.';
+
+  @override
+  String get orderSuccess => 'تم إنشاء الطلب بنجاح! الرقم: ';
+
+  @override
+  String get orderError => 'خطأ في إنشاء الطلب';
+
+  @override
+  String get addressRequired => 'العنوان مطلوب';
+
+  @override
+  String get cityRequired => 'المدينة مطلوبة';
+
+  @override
+  String get zipRequired => 'الرمز البريدي مطلوب';
+
+  @override
+  String get phoneRequired => 'رقم الهاتف مطلوب';
+
+  @override
+  String get quantity => 'الكمية';
+
+  @override
+  String get addToCart => 'أضف إلى السلة';
+
+  @override
+  String get confirmed => 'مؤكدة';
+
+  @override
+  String get preparing => 'قيد التحضير';
+
+  @override
+  String get delivering => 'قيد التوصيل';
+
+  @override
+  String get cancelled => 'ملغية';
+
+  @override
+  String get filterPreparing => 'قيد التحضير';
+
+  @override
+  String get filterDelivering => 'قيد التوصيل';
+
+  @override
+  String get supplierOrders => 'طلبات المورد';
+
+  @override
+  String get client => 'العميل';
+
+  @override
+  String get totalRevenue => 'إجمالي الإيرادات';
+
+  @override
+  String get moreProducts => 'منتج/منتجات أخرى';
+
+  @override
+  String get confirmOrderMessage => 'هل تريد تأكيد الطلب';
+
+  @override
+  String get orderConfirmed => 'تم تأكيد الطلب بنجاح';
+
+  @override
+  String get cancelOrder => 'إلغاء الطلب';
+
+  @override
+  String get orderCancelled => 'تم إلغاء الطلب';
+
+  @override
+  String get cancellationReason => 'سبب الإلغاء';
+
+  @override
+  String get cancellationReasonHint => 'مثال: المنتج غير متوفر';
+
+  @override
+  String get back => 'رجوع';
+
+  @override
+  String get updateStatus => 'تحديث الحالة';
+
+  @override
+  String get updateStatusMessage => 'تحديث حالة الطلب إلى';
+
+  @override
+  String get order => 'طلب';
+
+  @override
+  String get filterCancelled => 'ملغية';
+
+  @override
+  String get stockManagement => 'إدارة المخزون';
+
+  @override
+  String get stockQuantity => 'الكمية في المخزون';
+
+  @override
+  String get minStockAlert => 'حد التنبيه الأدنى';
+
+  @override
+  String get maxStockAlert => 'الحد الأقصى للمخزون';
+
+  @override
+  String get stockSufficient => 'مخزون كاف';
+
+  @override
+  String get lowStock => 'مخزون منخفض';
+
+  @override
+  String get outOfStock => 'نفذ من المخزون';
+
+  @override
+  String get inStock => 'في المخزون';
+
+  @override
+  String get available => 'متوفر';
+
+  @override
+  String get soonOut => 'سينفذ قريباً';
 }

@@ -108,13 +108,17 @@ class _CartScreenState extends State<CartScreen> {
         ],
       ),
       bottomNavigationBar: BottomNavBar(
-        currentIndex: 2,
+        currentIndex: 3, // Panier
         onTap: (index) {
           if (index == 0) {
             Navigator.pushReplacementNamed(context, '/merchant/dashboard');
           } else if (index == 1) {
             Navigator.pushReplacementNamed(context, '/merchant/orders');
+          } else if (index == 2) {
+            Navigator.pushReplacementNamed(context, '/merchant/products');
           } else if (index == 3) {
+            // Déjà sur panier
+          } else if (index == 4) {
             Navigator.pushReplacementNamed(context, '/merchant/account');
           }
         },
@@ -300,7 +304,23 @@ class _CartScreenState extends State<CartScreen> {
               height: 50,
               child: ElevatedButton(
                 onPressed: () {
-                  // Passer la commande
+                  if (cartService.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Votre panier est vide'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                    return;
+                  }
+
+                  final authService = Provider.of<AuthService>(context, listen: false);
+                  if (!authService.isAuthenticated) {
+                    Navigator.pushNamed(context, '/login');
+                    return;
+                  }
+
+                  Navigator.pushNamed(context, '/merchant/checkout');
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,

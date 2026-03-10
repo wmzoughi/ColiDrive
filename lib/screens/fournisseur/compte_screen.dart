@@ -275,7 +275,7 @@ class CompteScreenS extends StatelessWidget {
           if (index == 0) {
             Navigator.pushReplacementNamed(context, '/supplier/dashboard');
           } else if (index == 1) {
-            // Navigator.pushNamed(context, '/supplier/orders');
+            Navigator.pushNamed(context, '/supplier/orders');
           } else if (index == 2) {
             Navigator.push(
               context,

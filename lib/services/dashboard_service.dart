@@ -48,8 +48,37 @@ class DashboardService extends ChangeNotifier {
     'Authorization': 'Bearer ${_authService.token}',
   };
 
-  // Formater en dirhams marocain
+  // Fonction utilitaire pour convertir n'importe quelle valeur en double
+  double _toDouble(dynamic value) {
+    if (value == null) return 0.0;
+    if (value is double) return value;
+    if (value is int) return value.toDouble();
+    if (value is String) {
+      try {
+        return double.parse(value);
+      } catch (e) {
+        return 0.0;
+      }
+    }
+    return 0.0;
+  }
 
+  // Fonction utilitaire pour convertir n'importe quelle valeur en int
+  int _toInt(dynamic value) {
+    if (value == null) return 0;
+    if (value is int) return value;
+    if (value is double) return value.toInt();
+    if (value is String) {
+      try {
+        return int.parse(value);
+      } catch (e) {
+        return 0;
+      }
+    }
+    return 0;
+  }
+
+  // Formater en dirhams marocain
   String formatMAD(double amount, BuildContext context) {
     final localizations = AppLocalizations.of(context)!;
     // Format: 1.234,56 MAD ou ١٬٢٣٤٫٥٦ درهم
@@ -76,55 +105,75 @@ class DashboardService extends ChangeNotifier {
       if (ordersResponse.statusCode == 200 && productsResponse.statusCode == 200) {
         final ordersData = json.decode(ordersResponse.body);
         final productsData = json.decode(productsResponse.body);
+        print('📊 ordersData keys: ${ordersData.keys}');
+        if (ordersData['data'] != null) {
+          print('📊 ordersData["data"] keys: ${ordersData['data'].keys}');
+        }
 
         final List orders = ordersData['data']['data'] ?? ordersData['data'] ?? [];
         final List products = productsData['data']['data'] ?? productsData['data'] ?? [];
 
+        print('📊 Nombre de commandes: ${orders.length}');
+        print('📊 Nombre de produits: ${products.length}');
+
         // Calculer les statistiques
         _totalOrders = orders.length;
-        _pendingOrders = orders.where((o) => o['status'] == 'pending' || o['delivery_status'] == 'pending').length;
+        _pendingOrders = orders.where((o) {
+          String status = o['status'] ?? o['delivery_status'] ?? '';
+          return status == 'pending';
+        }).length;
 
+        // 👇 CORRECTION: Utiliser _toDouble au lieu de toDouble() direct
         _totalSales = orders.fold(0.0, (sum, order) {
-          return sum + (order['amount_total']?.toDouble() ?? 0.0);
+          return sum + _toDouble(order['amount_total']);
         });
 
         // Produits en rupture (stock < seuil min)
         _outOfStockProducts = products.where((p) {
-          int stock = p['stock_quantity'] ?? 0;
-          int minStock = p['min_stock_alert'] ?? 5;
+          int stock = _toInt(p['stock_quantity']);
+          int minStock = _toInt(p['min_stock_alert']);
+          if (minStock == 0) minStock = 5; // Valeur par défaut
           return stock <= minStock;
         }).length;
 
         // Transactions récentes (les 5 dernières commandes)
         final recentOrders = orders.take(5).toList();
         _recentTransactions = recentOrders.map((order) {
+          // 👇 CORRECTION: Utiliser _toDouble pour le montant
+          double montant = _toDouble(order['amount_total']);
+
           return {
-            'clientName': order['partner']?['name'] ?? 'Client',
-            'commandeRef': order['name'] ?? 'Commande ${order['id']}',
-            'montant': (order['amount_total']?.toDouble() ?? 0.0),
-            'statut': order['delivery_status'] == 'delivered' ? 'Livrée' : 'En retard',
-            'timeInfo': _formatTimeAgo(order['create_date']),
-            'isDelayed': order['delivery_status'] != 'delivered',
+            'clientName': order['partner']?['name'] ??
+                order['customer']?['name'] ??
+                order['customer_name'] ??
+                'Client',
+            'commandeRef': order['name'] ??
+                order['order_number'] ??
+                'Commande ${order['id']}',
+            'montant': montant,
+            'statut': order['status'] ?? order['delivery_status'] ?? 'pending',
+            'timeInfo': _formatTimeAgo(order['created_at'] ?? order['create_date']),
+            'isDelayed': (order['status'] ?? order['delivery_status']) != 'delivered',
           };
         }).toList();
 
         // Produits populaires (triés par popular_rank)
         final sortedProducts = List.from(products);
         sortedProducts.sort((a, b) {
-          int rankA = a['popular_rank'] ?? 0;
-          int rankB = b['popular_rank'] ?? 0;
+          int rankA = _toInt(a['popular_rank']);
+          int rankB = _toInt(b['popular_rank']);
           return rankB.compareTo(rankA);
         });
         _popularProducts = sortedProducts.take(5).map((p) => Product.fromJson(p)).toList();
 
-        // Données du graphique (simulées pour l'instant)
+        // Données du graphique
         _salesChartData = [
-          {'month': 'Janv.', 'value': 45000, 'isActive': false},
-          {'month': 'Fév.', 'value': 38000, 'isActive': false},
-          {'month': 'Mars.', 'value': 52000, 'isActive': true},
-          {'month': 'Avril', 'value': 48000, 'isActive': false},
-          {'month': 'Mai', 'value': 63000, 'isActive': false},
-          {'month': 'Juin', 'value': 58000, 'isActive': false},
+          {'month': 'Janv.', 'value': 45000.0, 'isActive': false},
+          {'month': 'Fév.', 'value': 38000.0, 'isActive': false},
+          {'month': 'Mars', 'value': 52000.0, 'isActive': true},
+          {'month': 'Avril', 'value': 48000.0, 'isActive': false},
+          {'month': 'Mai', 'value': 63000.0, 'isActive': false},
+          {'month': 'Juin', 'value': 58000.0, 'isActive': false},
         ];
 
         notifyListeners();
@@ -132,6 +181,7 @@ class DashboardService extends ChangeNotifier {
         _setError('Erreur de chargement des données');
       }
     } catch (e) {
+      print('❌ Erreur dashboard: $e');
       _setError('Erreur réseau: ${e.toString()}');
     } finally {
       _setLoading(false);

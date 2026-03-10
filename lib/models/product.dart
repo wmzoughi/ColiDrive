@@ -20,6 +20,9 @@ class Product {
   final double? weight;
   final bool active;
   final String? imageUrl;  // 👈 NOUVEAU CHAMP
+  final int? stockQuantity;
+  final int? minStockAlert;
+  final int? maxStockAlert;
 
   Product({
     required this.id,
@@ -41,6 +44,9 @@ class Product {
     this.weight,
     required this.active,
     this.imageUrl,
+    this.stockQuantity,
+    this.minStockAlert,
+    this.maxStockAlert,
   });
 
   factory Product.fromJson(Map<String, dynamic> json) {
@@ -94,6 +100,9 @@ class Product {
       weight: json['weight']?.toDouble(),
       active: json['active'] ?? true,
       imageUrl: json['image_url'],
+      stockQuantity: json['stock_quantity'] ?? 0,
+      minStockAlert: json['min_stock_alert'] ?? 5,
+      maxStockAlert: json['max_stock_alert'] ?? 100,
     );
   }
 

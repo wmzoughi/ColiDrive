@@ -396,7 +396,7 @@ class CompteScreenM extends StatelessWidget {
         ),
       ),
       bottomNavigationBar: BottomNavBar(
-        currentIndex: 3,
+        currentIndex: 4,
         onTap: (index) {
           if (index == 0) {
             Navigator.pushReplacementNamed(context, '/merchant/dashboard');
@@ -404,6 +404,8 @@ class CompteScreenM extends StatelessWidget {
             Navigator.pushReplacementNamed(context, '/merchant/orders');
           } else if (index == 2) {
             Navigator.pushReplacementNamed(context, '/merchant/products');
+          } else if (index == 3) { // Panier
+            Navigator.pushNamed(context, '/merchant/cart');
           }
         },
       ),

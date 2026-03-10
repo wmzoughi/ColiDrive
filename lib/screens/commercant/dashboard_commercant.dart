@@ -9,7 +9,7 @@ import '../../l10n/app_localizations.dart';
 import '../../models/product.dart';
 import '../../models/order.dart';
 import '../../widgets/product_image.dart';
-import 'compte_screen.dart';
+import '../../widgets/cart_icon_with_badge.dart';
 
 class DashboardCommercant extends StatefulWidget {
   const DashboardCommercant({Key? key}) : super(key: key);
@@ -92,7 +92,7 @@ class _DashboardCommercantState extends State<DashboardCommercant> {
             onPressed: () {},
           ),
           IconButton(
-            icon: const Icon(Icons.shopping_cart_outlined, color: Color(0xFF2D3A4F)),
+            icon: CartIconWithBadge(),
             onPressed: () => Navigator.pushNamed(context, '/merchant/cart'),
           ),
         ],
@@ -208,7 +208,9 @@ class _DashboardCommercantState extends State<DashboardCommercant> {
             Navigator.pushNamed(context, '/merchant/orders');
           } else if (index == 2) {
             Navigator.pushNamed(context, '/merchant/products');
-          } else if (index == 3) {
+          } else if (index == 3) { // Panier
+            Navigator.pushNamed(context, '/merchant/cart');
+          } else if (index == 4) { // Compte
             Navigator.pushNamed(context, '/merchant/account');
           }
         },

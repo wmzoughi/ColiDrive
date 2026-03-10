@@ -193,7 +193,9 @@ class _OrdersScreenState extends State<OrdersScreen> {
             Navigator.pushReplacementNamed(context, '/merchant/dashboard');
           } else if (index == 2) {
             Navigator.pushReplacementNamed(context, '/merchant/products');
-          } else if (index == 3) {
+          } else if (index == 3) { // Panier
+            Navigator.pushNamed(context, '/merchant/cart');
+          } else if (index == 4) { // Compte
             Navigator.pushReplacementNamed(context, '/merchant/account');
           }
         },

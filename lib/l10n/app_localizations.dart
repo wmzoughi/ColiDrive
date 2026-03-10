@@ -515,7 +515,7 @@ abstract class AppLocalizations {
   /// No description provided for @filterConfirmed.
   ///
   /// In fr, this message translates to:
-  /// **'Validées'**
+  /// **'Confirmées'**
   String get filterConfirmed;
 
   /// No description provided for @filterDelivered.
@@ -715,6 +715,372 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Une erreur est survenue'**
   String get errorOccurred;
+
+  /// No description provided for @cart.
+  ///
+  /// In fr, this message translates to:
+  /// **'Panier'**
+  String get cart;
+
+  /// No description provided for @checkoutTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Finaliser la commande'**
+  String get checkoutTitle;
+
+  /// No description provided for @orderSummary.
+  ///
+  /// In fr, this message translates to:
+  /// **'Récapitulatif de votre commande'**
+  String get orderSummary;
+
+  /// No description provided for @itemsCount.
+  ///
+  /// In fr, this message translates to:
+  /// **'article(s)'**
+  String get itemsCount;
+
+  /// No description provided for @subtotal.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sous-total'**
+  String get subtotal;
+
+  /// No description provided for @tax.
+  ///
+  /// In fr, this message translates to:
+  /// **'TVA (20%)'**
+  String get tax;
+
+  /// No description provided for @shipping.
+  ///
+  /// In fr, this message translates to:
+  /// **'Frais de livraison'**
+  String get shipping;
+
+  /// No description provided for @total.
+  ///
+  /// In fr, this message translates to:
+  /// **'Total'**
+  String get total;
+
+  /// No description provided for @shippingAddress.
+  ///
+  /// In fr, this message translates to:
+  /// **'Adresse de livraison'**
+  String get shippingAddress;
+
+  /// No description provided for @address.
+  ///
+  /// In fr, this message translates to:
+  /// **'Adresse'**
+  String get address;
+
+  /// No description provided for @addressHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Numéro et nom de rue'**
+  String get addressHint;
+
+  /// No description provided for @city.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ville'**
+  String get city;
+
+  /// No description provided for @zipCode.
+  ///
+  /// In fr, this message translates to:
+  /// **'Code postal'**
+  String get zipCode;
+
+  /// No description provided for @paymentMethod.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mode de paiement'**
+  String get paymentMethod;
+
+  /// No description provided for @cashOnDelivery.
+  ///
+  /// In fr, this message translates to:
+  /// **'Paiement à la livraison (Espèces)'**
+  String get cashOnDelivery;
+
+  /// No description provided for @cashSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Payez en espèces à la réception'**
+  String get cashSubtitle;
+
+  /// No description provided for @cardPayment.
+  ///
+  /// In fr, this message translates to:
+  /// **'Carte bancaire'**
+  String get cardPayment;
+
+  /// No description provided for @cardSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Payez par carte (CIB, MasterCard, Visa)'**
+  String get cardSubtitle;
+
+  /// No description provided for @notes.
+  ///
+  /// In fr, this message translates to:
+  /// **'Notes (optionnel)'**
+  String get notes;
+
+  /// No description provided for @notesHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Instructions spéciales pour la livraison...'**
+  String get notesHint;
+
+  /// No description provided for @confirmOrder.
+  ///
+  /// In fr, this message translates to:
+  /// **'Confirmer la commande'**
+  String get confirmOrder;
+
+  /// No description provided for @termsAccept.
+  ///
+  /// In fr, this message translates to:
+  /// **'En confirmant votre commande, vous acceptez nos conditions générales de vente.'**
+  String get termsAccept;
+
+  /// No description provided for @orderSuccess.
+  ///
+  /// In fr, this message translates to:
+  /// **'Commande créée avec succès! Numéro: '**
+  String get orderSuccess;
+
+  /// No description provided for @orderError.
+  ///
+  /// In fr, this message translates to:
+  /// **'Erreur lors de la création de la commande'**
+  String get orderError;
+
+  /// No description provided for @addressRequired.
+  ///
+  /// In fr, this message translates to:
+  /// **'L\'adresse est requise'**
+  String get addressRequired;
+
+  /// No description provided for @cityRequired.
+  ///
+  /// In fr, this message translates to:
+  /// **'La ville est requise'**
+  String get cityRequired;
+
+  /// No description provided for @zipRequired.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le code postal est requis'**
+  String get zipRequired;
+
+  /// No description provided for @phoneRequired.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le numéro de téléphone est requis'**
+  String get phoneRequired;
+
+  /// No description provided for @quantity.
+  ///
+  /// In fr, this message translates to:
+  /// **'Quantité'**
+  String get quantity;
+
+  /// No description provided for @addToCart.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter au panier'**
+  String get addToCart;
+
+  /// No description provided for @confirmed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Confirmée'**
+  String get confirmed;
+
+  /// No description provided for @preparing.
+  ///
+  /// In fr, this message translates to:
+  /// **'En préparation'**
+  String get preparing;
+
+  /// No description provided for @delivering.
+  ///
+  /// In fr, this message translates to:
+  /// **'En livraison'**
+  String get delivering;
+
+  /// No description provided for @cancelled.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annulée'**
+  String get cancelled;
+
+  /// No description provided for @filterPreparing.
+  ///
+  /// In fr, this message translates to:
+  /// **'En préparation'**
+  String get filterPreparing;
+
+  /// No description provided for @filterDelivering.
+  ///
+  /// In fr, this message translates to:
+  /// **'En livraison'**
+  String get filterDelivering;
+
+  /// No description provided for @supplierOrders.
+  ///
+  /// In fr, this message translates to:
+  /// **'Commandes fournisseur'**
+  String get supplierOrders;
+
+  /// No description provided for @client.
+  ///
+  /// In fr, this message translates to:
+  /// **'Client'**
+  String get client;
+
+  /// No description provided for @totalRevenue.
+  ///
+  /// In fr, this message translates to:
+  /// **'Chiffre d\'affaires'**
+  String get totalRevenue;
+
+  /// No description provided for @moreProducts.
+  ///
+  /// In fr, this message translates to:
+  /// **'autre(s) produit(s)'**
+  String get moreProducts;
+
+  /// No description provided for @confirmOrderMessage.
+  ///
+  /// In fr, this message translates to:
+  /// **'Voulez-vous confirmer la commande'**
+  String get confirmOrderMessage;
+
+  /// No description provided for @orderConfirmed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Commande confirmée avec succès'**
+  String get orderConfirmed;
+
+  /// No description provided for @cancelOrder.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler la commande'**
+  String get cancelOrder;
+
+  /// No description provided for @orderCancelled.
+  ///
+  /// In fr, this message translates to:
+  /// **'Commande annulée'**
+  String get orderCancelled;
+
+  /// No description provided for @cancellationReason.
+  ///
+  /// In fr, this message translates to:
+  /// **'Raison d\'annulation'**
+  String get cancellationReason;
+
+  /// No description provided for @cancellationReasonHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ex: Produit en rupture de stock'**
+  String get cancellationReasonHint;
+
+  /// No description provided for @back.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retour'**
+  String get back;
+
+  /// No description provided for @updateStatus.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mettre à jour le statut'**
+  String get updateStatus;
+
+  /// No description provided for @updateStatusMessage.
+  ///
+  /// In fr, this message translates to:
+  /// **'Marquer la commande comme'**
+  String get updateStatusMessage;
+
+  /// No description provided for @order.
+  ///
+  /// In fr, this message translates to:
+  /// **'Commande'**
+  String get order;
+
+  /// No description provided for @filterCancelled.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annulées'**
+  String get filterCancelled;
+
+  /// No description provided for @stockManagement.
+  ///
+  /// In fr, this message translates to:
+  /// **'Gestion de stock'**
+  String get stockManagement;
+
+  /// No description provided for @stockQuantity.
+  ///
+  /// In fr, this message translates to:
+  /// **'Quantité en stock'**
+  String get stockQuantity;
+
+  /// No description provided for @minStockAlert.
+  ///
+  /// In fr, this message translates to:
+  /// **'Seuil d\'alerte minimum'**
+  String get minStockAlert;
+
+  /// No description provided for @maxStockAlert.
+  ///
+  /// In fr, this message translates to:
+  /// **'Stock maximum'**
+  String get maxStockAlert;
+
+  /// No description provided for @stockSufficient.
+  ///
+  /// In fr, this message translates to:
+  /// **'Stock suffisant'**
+  String get stockSufficient;
+
+  /// No description provided for @lowStock.
+  ///
+  /// In fr, this message translates to:
+  /// **'Stock faible'**
+  String get lowStock;
+
+  /// No description provided for @outOfStock.
+  ///
+  /// In fr, this message translates to:
+  /// **'Rupture de stock'**
+  String get outOfStock;
+
+  /// No description provided for @inStock.
+  ///
+  /// In fr, this message translates to:
+  /// **'en stock'**
+  String get inStock;
+
+  /// No description provided for @available.
+  ///
+  /// In fr, this message translates to:
+  /// **'Disponible'**
+  String get available;
+
+  /// No description provided for @soonOut.
+  ///
+  /// In fr, this message translates to:
+  /// **'Bientôt épuisé'**
+  String get soonOut;
 }
 
 class _AppLocalizationsDelegate

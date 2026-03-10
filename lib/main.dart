@@ -1,7 +1,8 @@
+// lib/main.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
-import 'l10n/app_localizations.dart';  // 👈 Notez le nom du fichier
+import 'l10n/app_localizations.dart';
 
 // Auth
 import 'screens/auth/login_screen.dart';
@@ -15,7 +16,6 @@ import 'screens/commercant/dashboard_commercant.dart';
 import 'screens/fournisseur/dashboard_fournisseur.dart';
 import 'screens/fournisseur/compte_screen.dart';
 import 'screens/commercant/compte_screen.dart';
-import 'services/cart_service.dart';
 
 // Gestion produits
 import 'screens/fournisseur/gestion_produits.dart';
@@ -23,38 +23,50 @@ import 'screens/fournisseur/add_edit_product_screen.dart';
 import 'screens/commercant/cart_screen.dart';
 import 'screens/commercant/orders_screen.dart';
 import 'screens/commercant/products_screen.dart';
+import 'screens/commercant/product_detail_screen.dart';
+import 'screens/commercant/checkout_screen.dart';
+import 'services/order_service.dart';
+import 'screens/fournisseur/SupplierOrdersScreen.dart';
 
 // Services
 import 'services/dashboard_service.dart';
 import 'services/product_service.dart';
 import 'services/merchant_service.dart';
-
+import 'services/cart_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   final authService = AuthService();
   await authService.init();
+
   final languageService = LanguageService();
+  final cartService = CartService(authService);
+
+  // ✅ Créer les services avant de les injecter
+  final orderService = OrderService(authService, cartService);
+  final dashboardService = DashboardService(authService);
+  final productService = ProductService(authService);
+  final merchantService = MerchantService(authService);
+
+  // ✅ Injecter TOUS les services dans authService
+  authService.setCartService(cartService);
+  authService.setOrderService(orderService);
+  authService.setDashboardService(dashboardService);
 
   runApp(
     MultiProvider(
       providers: [
+        // Services de base
         ChangeNotifierProvider(create: (_) => authService),
         ChangeNotifierProvider(create: (_) => languageService),
-        ChangeNotifierProvider(create: (_) => CartService()),
-        ChangeNotifierProxyProvider<AuthService, DashboardService>(
-          create: (context) => DashboardService(authService),
-          update: (context, authService, previous) => DashboardService(authService),
-        ),
-        ChangeNotifierProxyProvider<AuthService, ProductService>(
-          create: (context) => ProductService(authService),
-          update: (context, authService, previous) => ProductService(authService),
-        ),
-        ChangeNotifierProxyProvider<AuthService, MerchantService>(
-          create: (context) => MerchantService(authService),
-          update: (context, authService, previous) => MerchantService(authService),
-        ),
+        ChangeNotifierProvider(create: (_) => cartService),
+
+        // Services déjà créés (plus besoin de ProxyProvider)
+        ChangeNotifierProvider(create: (_) => orderService),
+        ChangeNotifierProvider(create: (_) => dashboardService),
+        ChangeNotifierProvider(create: (_) => productService),
+        ChangeNotifierProvider(create: (_) => merchantService),
       ],
       child: const MyApp(),
     ),
@@ -74,7 +86,6 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.teal,
         fontFamily: 'Poppins',
-        // 👇 AJOUTE ÇA POUR QUE TOUS LES TEXTES SOIENT PLUS GRAS EN ARABE
         textTheme: TextTheme(
           bodyLarge: TextStyle(
             fontWeight: languageService.isArabic ? FontWeight.w600 : FontWeight.normal,
@@ -118,13 +129,41 @@ class MyApp extends StatelessWidget {
         '/register': (context) => const RegisterScreen(),
         '/forgot-password': (context) => const ForgotPasswordScreen(),
         '/merchant/dashboard': (context) => const DashboardCommercant(),
-        '/merchant/account': (context) => const CompteScreenM(),
         '/merchant/orders': (context) => const OrdersScreen(),
         '/merchant/products': (context) => const ProductsScreen(),
         '/merchant/cart': (context) => const CartScreen(),
+        '/merchant/account': (context) => const CompteScreenM(),
+        '/merchant/checkout': (context) => const CheckoutScreen(),
         '/supplier/dashboard': (context) => const DashboardFournisseur(),
         '/supplier/products': (context) => const GestionProduitsScreen(),
         '/supplier/account': (context) => const CompteScreenS(),
+        '/supplier/orders': (context) => const SupplierOrdersScreen(),
+      },
+      onGenerateRoute: (settings) {
+        if (settings.name == '/merchant/product-detail') {
+          final args = settings.arguments as Map<String, dynamic>;
+          return MaterialPageRoute(
+            builder: (context) => ProductDetailScreen(
+              product: args['product'],
+            ),
+          );
+        }
+        if (settings.name == '/merchant/checkout') {
+          return MaterialPageRoute(
+            builder: (context) => const CheckoutScreen(),
+          );
+        }
+        if (settings.name == '/supplier/product/edit') {
+          final args = settings.arguments as Map<String, dynamic>;
+          return MaterialPageRoute(
+            builder: (context) => AddEditProductScreen(
+              product: args['product'],
+              categories: args['categories'],
+              onProductAdded: args['onProductAdded'],
+            ),
+          );
+        }
+        return null;
       },
     );
   }
