@@ -5,16 +5,16 @@ import 'dart:typed_data';
 import '../utils/constants.dart';
 
 class ProductImage extends StatefulWidget {
-  final int productId;
-  final String? imageUrl;
+  final int? productId;           // ← CHANGEZ : rendez-le optionnel (avec ?)
+  final String? imageUrl;          // ← GARDEZ
   final double width;
   final double height;
   final BoxFit fit;
 
   const ProductImage({
     Key? key,
-    required this.productId,
-    this.imageUrl,
+    this.productId,                // ← CHANGEZ : plus de "required"
+    this.imageUrl,                 // ← GARDEZ
     this.width = 100,
     this.height = 100,
     this.fit = BoxFit.cover,
@@ -45,8 +45,9 @@ class _ProductImageState extends State<ProductImage> {
 
     try {
       String baseUrl = AppConstants.baseUrl.replaceFirst('/api', '');
-
       String fullUrl;
+
+      // ✅ 1. PRIORITÉ à l'URL directe si fournie
       if (widget.imageUrl != null && widget.imageUrl!.isNotEmpty) {
         if (widget.imageUrl!.startsWith('http')) {
           fullUrl = widget.imageUrl!;
@@ -55,8 +56,18 @@ class _ProductImageState extends State<ProductImage> {
         } else {
           fullUrl = '$baseUrl/${widget.imageUrl}';
         }
-      } else {
+      }
+      // ✅ 2. SINON, utiliser l'ID du produit
+      else if (widget.productId != null) {
         fullUrl = '$baseUrl/products/${widget.productId}/image';
+      }
+      // ✅ 3. AUCUNE image
+      else {
+        setState(() {
+          _error = 'Aucune image';
+          _isLoading = false;
+        });
+        return;
       }
 
       print('📸 Chargement: $fullUrl');

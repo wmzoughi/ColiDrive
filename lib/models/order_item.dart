@@ -10,6 +10,7 @@ class OrderItem {
   final int quantity;
   final double subtotal;
   final Map<String, dynamic>? productSnapshot;
+  final int? supplierId;
 
   // Constructeur corrigé
   OrderItem({
@@ -21,6 +22,8 @@ class OrderItem {
     required this.quantity,
     required this.subtotal,
     this.productSnapshot,
+    this.supplierId,
+
   });
 
   factory OrderItem.fromJson(Map<String, dynamic> json) {
@@ -49,6 +52,7 @@ class OrderItem {
       quantity: json['quantity'] as int,
       subtotal: (json['subtotal'] ?? 0).toDouble(),
       productSnapshot: snapshot,
+      supplierId: snapshot?['supplier_id'] as int?,
     );
   }
 }

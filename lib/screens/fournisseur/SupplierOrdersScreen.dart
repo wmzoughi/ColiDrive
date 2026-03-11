@@ -8,6 +8,7 @@ import '../../widgets/bottom_nav_bar.dart';
 import '../../widgets/product_image.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/order.dart';
+import '../../models/order_item.dart';
 
 class SupplierOrdersScreen extends StatefulWidget {
   const SupplierOrdersScreen({Key? key}) : super(key: key);
@@ -24,6 +25,52 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
   Map<String, dynamic>? _stats;
 
   List<String> _filters = [];
+
+  // ✅ ID du fournisseur connecté
+  int? get _currentSupplierId {
+    final authService = Provider.of<AuthService>(context, listen: false);
+    return authService.currentUser?.id;
+  }
+
+  // ✅ Filtrer les items du fournisseur
+
+  List<OrderItem> _getSupplierItems(Order order) {
+    if (order.items == null) {
+      print('❌ order.items est null');
+      return [];
+    }
+
+    final supplierId = _currentSupplierId;
+    if (supplierId == null) {
+      print('❌ supplierId est null');
+      return [];
+    }
+
+    print('🔍 Fournisseur connecté ID: $supplierId');
+    print('📦 Commande: ${order.orderNumber}');
+    print('   Total items dans commande: ${order.items!.length}');
+
+    List<OrderItem> filtered = [];
+
+    for (var item in order.items!) {
+      int? itemSupplierId = item.productSnapshot?['supplier_id'];
+      print('   - Produit: ${item.productName}');
+      print('     supplier_id dans snapshot: $itemSupplierId');
+      print('     correspond? ${itemSupplierId == supplierId}');
+
+      if (itemSupplierId == supplierId) {
+        filtered.add(item);
+      }
+    }
+
+    print('   ✅ Items filtrés: ${filtered.length}');
+    return filtered;
+  }
+  // ✅ VERSION CORRECTE
+  double _getSupplierTotal(Order order) {
+    final supplierItems = _getSupplierItems(order);
+    return supplierItems.fold(0.0, (sum, item) => sum + item.subtotal);
+  }
 
   @override
   void initState() {
@@ -101,6 +148,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
     }
   }
 
+  // ✅ Méthode pour confirmer une commande
   Future<void> _confirmOrder(Order order) async {
     final localizations = AppLocalizations.of(context)!;
 
@@ -154,6 +202,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
     }
   }
 
+  // ✅ Méthode pour passer en préparation
   Future<void> _prepareOrder(Order order) async {
     final localizations = AppLocalizations.of(context)!;
 
@@ -207,6 +256,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
     }
   }
 
+  // ✅ Méthode pour démarrer la livraison
   Future<void> _startDelivery(Order order) async {
     final localizations = AppLocalizations.of(context)!;
 
@@ -260,6 +310,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
     }
   }
 
+  // ✅ Méthode pour marquer comme livrée
   Future<void> _markAsDelivered(Order order) async {
     final localizations = AppLocalizations.of(context)!;
 
@@ -289,15 +340,31 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
 
       if (confirm != true) return;
 
-      // final success = await orderService.deliverOrder(order.id); // À adapter
+      final success = await orderService.deliverOrder(order.id);
 
-      _loadOrders();
-      _loadStats();
+      if (success && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('✅ Commande livrée'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        _loadOrders();
+        _loadStats();
+      }
     } catch (e) {
-      debugPrint('Erreur: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('❌ ${localizations.errorOccurred}: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
+  // ✅ Méthode pour annuler une commande
   Future<void> _cancelOrder(Order order) async {
     final localizations = AppLocalizations.of(context)!;
     final TextEditingController reasonController = TextEditingController();
@@ -414,11 +481,6 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
       case 'cancelled': return localizations.cancelled;
       default: return order.status;
     }
-  }
-
-  String _getCustomerName(Order order) {
-    // À adapter selon votre structure de données
-    return 'Client #${order.id}';
   }
 
   @override
@@ -694,8 +756,22 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
     );
   }
 
+  // ✅ Carte de commande avec filtrage
   Widget _buildOrderCard(Order order, AppLocalizations localizations, bool isArabic) {
-    const int maxDisplayItems = 3;
+    final supplierItems = _getSupplierItems(order);
+    final supplierTotal = _getSupplierTotal(order);
+    const int maxDisplayItems = 10;
+    print('🟢 Construction carte pour ${order.orderNumber}');
+    print('   supplierItems.length = ${supplierItems.length}');
+    print('   supplierTotal = $supplierTotal');
+
+    if (supplierItems.isEmpty) {
+      print('   ❌ Carte cachée (aucun item)');
+      return const SizedBox.shrink();
+    }
+
+    print('   ✅ Carte affichée avec ${supplierItems.length} items');
+    if (supplierItems.isEmpty) return const SizedBox.shrink();
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -714,6 +790,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // En-tête
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -761,13 +838,14 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
           ),
           const SizedBox(height: 12),
 
+          // Client
           Row(
             children: [
               const Icon(Icons.person_outline, size: 14, color: Color(0xFF8A9AA8)),
               const SizedBox(width: 4),
               Expanded(
                 child: Text(
-                  '${localizations.client}: ${_getCustomerName(order)}',
+                  '${localizations.client}: ${order.customerDisplayName}',
                   style: const TextStyle(
                     fontSize: 13,
                     color: Color(0xFF2D3A4F),
@@ -778,6 +856,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
           ),
           const SizedBox(height: 8),
 
+          // Date
           Row(
             children: [
               const Icon(Icons.access_time, size: 14, color: Color(0xFF8A9AA8)),
@@ -793,7 +872,8 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
           ),
           const SizedBox(height: 12),
 
-          ...order.items?.take(maxDisplayItems).map((item) {
+          // Produits du fournisseur
+          ...supplierItems.take(maxDisplayItems).map((item) {
             return Padding(
               padding: const EdgeInsets.only(bottom: 8),
               child: Row(
@@ -838,13 +918,13 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
                 ],
               ),
             );
-          }).toList() ?? [],
+          }).toList(),
 
-          if ((order.items?.length ?? 0) > maxDisplayItems)
+          if (supplierItems.length > maxDisplayItems)
             Padding(
               padding: const EdgeInsets.only(bottom: 8),
               child: Text(
-                '+ ${order.items!.length - maxDisplayItems} ${localizations.moreProducts}',
+                '+ ${supplierItems.length - maxDisplayItems} ${localizations.moreProducts}',
                 style: const TextStyle(
                   fontSize: 11,
                   color: Color(0xFF8A9AA8),
@@ -855,6 +935,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
 
           const Divider(height: 20),
 
+          // Total et boutons
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -862,14 +943,14 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    localizations.total,
+                    'Total (vos produits)',
                     style: const TextStyle(
                       fontSize: 12,
                       color: Color(0xFF8A9AA8),
                     ),
                   ),
                   Text(
-                    '${order.amountTotal.toStringAsFixed(2)} ${localizations.currency}',
+                    '${supplierTotal.toStringAsFixed(2)} ${localizations.currency}',
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 18,

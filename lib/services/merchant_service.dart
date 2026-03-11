@@ -58,6 +58,41 @@ class MerchantService extends ChangeNotifier {
     // Format: 1.234,56 MAD ou ١٬٢٣٤٫٥٦ درهم
     return '${amount.toStringAsFixed(2).replaceAll('.', ',')} ${localizations.currency}';
   }
+
+  // ========== NOUVELLE MÉTHODE POUR OBTENIR LES FOURNISSEURS DISPONIBLES ==========
+  Future<List<Map<String, dynamic>>> getAvailableSuppliers() async {
+    try {
+      print('📦 Chargement des fournisseurs disponibles...');
+
+      final response = await http.get(
+        Uri.parse('${AppConstants.baseUrl}/merchant/suppliers/available'),
+        headers: _headers,
+      );
+
+      print('📥 Statut: ${response.statusCode}');
+      print('📥 Réponse: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success']) {
+          final List suppliers = data['data'] ?? [];
+          print('✅ ${suppliers.length} fournisseurs trouvés');
+          return suppliers.map((s) => {
+            'id': s['id'],
+            'name': s['name'],
+            'company_name': s['company_name'] ?? s['name'],
+            'phone': s['phone'],
+            'email': s['email'],
+          }).toList();
+        }
+      }
+      return [];
+    } catch (e) {
+      print('❌ Erreur chargement fournisseurs: $e');
+      return [];
+    }
+  }
+
   // ========== CHARGEMENT DES DONNÉES ==========
 
   Future<void> loadDashboardData() async {
@@ -184,9 +219,9 @@ class MerchantService extends ChangeNotifier {
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         if (data['success']) {
-          _totalOrders = data['data']['total'] ?? 0;
-          _pendingOrders = data['data']['pending'] ?? 0;
-          _deliveredOrders = data['data']['delivered'] ?? 0;
+          _totalOrders = data['data']['total_orders'] ?? 0;
+          _pendingOrders = data['data']['pending_orders'] ?? 0;
+          _deliveredOrders = data['data']['delivered_orders'] ?? 0;
         }
       }
     } catch (e) {
@@ -280,7 +315,7 @@ class MerchantService extends ChangeNotifier {
   }) async {
     try {
       String url = '${AppConstants.baseUrl}/merchant/orders?page=$page';
-      if (status != null) {
+      if (status != null && status.isNotEmpty) {
         url += '&status=$status';
       }
       if (fromDate != null) {

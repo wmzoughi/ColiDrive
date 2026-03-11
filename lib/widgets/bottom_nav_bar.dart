@@ -57,30 +57,47 @@ class BottomNavBar extends StatelessWidget {
       AppLocalizations localizations,
       bool isCommercant
       ) {
-    List<BottomNavigationBarItem> items = [
-      // Accueil - pour tous
+    List<BottomNavigationBarItem> items = [];
+
+    // ACCUEIL - index 0
+    items.add(
       BottomNavigationBarItem(
         icon: const Icon(Icons.home_outlined),
         activeIcon: const Icon(Icons.home),
         label: localizations.home,
       ),
+    );
 
-      // Commandes - pour tous
+    // FOURNISSEURS - UNIQUEMENT pour les commerçants (index 1)
+    if (isCommercant) {
+      items.add(
+        BottomNavigationBarItem(
+          icon: const Icon(Icons.store_outlined),
+          activeIcon: const Icon(Icons.store),
+          label: 'Boutiques',
+        ),
+      );
+    }
+
+    // COMMANDES - pour tous (index 2 ou 1 selon le cas)
+    items.add(
       BottomNavigationBarItem(
         icon: const Icon(Icons.shopping_bag_outlined),
         activeIcon: const Icon(Icons.shopping_bag),
         label: localizations.orders,
       ),
+    );
 
-      // Produits - pour tous
+    // PRODUITS - pour tous (index 3 ou 2 selon le cas)
+    items.add(
       BottomNavigationBarItem(
         icon: const Icon(Icons.inventory_outlined),
         activeIcon: const Icon(Icons.inventory),
         label: localizations.products,
       ),
-    ];
+    );
 
-    // Panier - UNIQUEMENT pour les commerçants
+    // PANIER - UNIQUEMENT pour les commerçants (index 4 ou 3 selon le cas)
     if (isCommercant) {
       items.add(
         BottomNavigationBarItem(
@@ -161,7 +178,7 @@ class BottomNavBar extends StatelessWidget {
       );
     }
 
-    // Compte - pour tous (toujours en dernier)
+    // COMPTE - pour tous (toujours en dernier)
     items.add(
       BottomNavigationBarItem(
         icon: const Icon(Icons.person_outline),

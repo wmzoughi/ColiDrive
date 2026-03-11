@@ -426,16 +426,18 @@ class _ProductsScreenState extends State<ProductsScreen> {
         ],
       ),
       bottomNavigationBar: BottomNavBar(
-        currentIndex: 2,
+        currentIndex: 3,
         onTap: (index) {
           if (index == 0) {
             Navigator.pushReplacementNamed(context, '/merchant/dashboard');
           } else if (index == 1) {
-            Navigator.pushNamed(context, '/merchant/orders');
-          } else if (index == 3) { // Panier
-            Navigator.pushNamed(context, '/merchant/cart');
-          } else if (index == 4) { // Compte
-            Navigator.pushNamed(context, '/merchant/account');
+            Navigator.pushReplacementNamed(context, '/merchant/suppliers');
+          } else if (index == 2) {
+            Navigator.pushReplacementNamed(context, '/merchant/orders');
+          } else if (index == 4) {
+            Navigator.pushReplacementNamed(context, '/merchant/cart');
+          } else if (index == 5) {
+            Navigator.pushReplacementNamed(context, '/merchant/account');
           }
         },
       ),

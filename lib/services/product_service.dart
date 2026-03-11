@@ -135,6 +135,23 @@ class ProductService extends ChangeNotifier {
       _setLoading(false);
     }
   }
+  Future<List<Product>> getProductsBySupplier(int supplierId, {int page = 1}) async {
+    try {
+      final response = await http.get(
+        Uri.parse('${AppConstants.baseUrl}/products/supplier/$supplierId?page=$page'),
+        headers: _headers,
+      );
+      final data = json.decode(response.body);
+      if (data['success']) {
+        final List productsJson = data['data']['data'] ?? [];
+        return productsJson.map((p) => Product.fromJson(p)).toList();
+      }
+      return [];
+    } catch (e) {
+      print('Erreur: $e');
+      return [];
+    }
+  }
 
   String formatMAD(double amount, BuildContext context) {
     final localizations = AppLocalizations.of(context)!;

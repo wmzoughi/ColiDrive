@@ -396,16 +396,18 @@ class CompteScreenM extends StatelessWidget {
         ),
       ),
       bottomNavigationBar: BottomNavBar(
-        currentIndex: 4,
+        currentIndex: 5,
         onTap: (index) {
           if (index == 0) {
             Navigator.pushReplacementNamed(context, '/merchant/dashboard');
           } else if (index == 1) {
-            Navigator.pushReplacementNamed(context, '/merchant/orders');
+            Navigator.pushReplacementNamed(context, '/merchant/suppliers');
           } else if (index == 2) {
+            Navigator.pushReplacementNamed(context, '/merchant/orders');
+          } else if (index == 3) {
             Navigator.pushReplacementNamed(context, '/merchant/products');
-          } else if (index == 3) { // Panier
-            Navigator.pushNamed(context, '/merchant/cart');
+          } else if (index == 4) {
+            Navigator.pushReplacementNamed(context, '/merchant/cart');
           }
         },
       ),

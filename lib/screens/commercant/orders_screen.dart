@@ -187,15 +187,17 @@ class _OrdersScreenState extends State<OrdersScreen> {
         ],
       ),
       bottomNavigationBar: BottomNavBar(
-        currentIndex: 1,
+        currentIndex: 2,
         onTap: (index) {
           if (index == 0) {
             Navigator.pushReplacementNamed(context, '/merchant/dashboard');
-          } else if (index == 2) {
+          } else if (index == 1) {
+            Navigator.pushReplacementNamed(context, '/merchant/suppliers');
+          } else if (index == 3) {
             Navigator.pushReplacementNamed(context, '/merchant/products');
-          } else if (index == 3) { // Panier
-            Navigator.pushNamed(context, '/merchant/cart');
-          } else if (index == 4) { // Compte
+          } else if (index == 4) {
+            Navigator.pushReplacementNamed(context, '/merchant/cart');
+          } else if (index == 5) {
             Navigator.pushReplacementNamed(context, '/merchant/account');
           }
         },
@@ -203,8 +205,11 @@ class _OrdersScreenState extends State<OrdersScreen> {
     );
   }
 
+  // lib/screens/commercant/orders_screen.dart
+
   Widget _buildOrderCard(Order order) {
     final localizations = AppLocalizations.of(context)!;
+    final isArabic = Localizations.localeOf(context).languageCode == 'ar';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -223,6 +228,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // En-tête avec numéro de commande et statut
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -278,21 +284,27 @@ class _OrdersScreenState extends State<OrdersScreen> {
           ),
           const SizedBox(height: 12),
 
+          // Fournisseur
           Row(
             children: [
               const Icon(Icons.store, size: 14, color: Color(0xFF8A9AA8)),
               const SizedBox(width: 4),
-              Text(
-                '${localizations.company}: ${order.supplierName ?? localizations.company}',
-                style: const TextStyle(
-                  fontSize: 13,
-                  color: Color(0xFF2D3A4F),
+              Expanded(
+                child: Text(
+                  '${localizations.company}: ${order.supplierName ?? localizations.company}',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: Color(0xFF2D3A4F),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
           ),
           const SizedBox(height: 8),
 
+          // Date
           Row(
             children: [
               const Icon(Icons.access_time, size: 14, color: Color(0xFF8A9AA8)),
@@ -308,18 +320,35 @@ class _OrdersScreenState extends State<OrdersScreen> {
           ),
           const SizedBox(height: 12),
 
+          // ✅ PRODUITS AVEC IMAGES CORRIGÉES
           ...order.items?.take(2).map((item) {
+            // Récupérer l'URL de l'image depuis le snapshot
+            String? imageUrl = item.productSnapshot?['image_url'];
+
             return Padding(
               padding: const EdgeInsets.only(bottom: 8),
               child: Row(
                 children: [
-                  ProductImage(
-                    productId: item.productId,
-                    width: 40,
-                    height: 40,
-                    fit: BoxFit.cover,
+                  // ✅ Image du produit (priorité à l'URL du snapshot)
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: imageUrl != null && imageUrl.isNotEmpty
+                        ? ProductImage(
+                      imageUrl: imageUrl,
+                      width: 40,
+                      height: 40,
+                      fit: BoxFit.cover,
+                    )
+                        : ProductImage(
+                      productId: item.productId,
+                      width: 40,
+                      height: 40,
+                      fit: BoxFit.cover,
+                    ),
                   ),
                   const SizedBox(width: 8),
+
+                  // Détails du produit
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -331,6 +360,8 @@ class _OrdersScreenState extends State<OrdersScreen> {
                             fontSize: 13,
                             color: Color(0xFF2D3A4F),
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                         Text(
                           '${item.quantity} x ${item.price.toStringAsFixed(2)} ${localizations.currency}',
@@ -342,6 +373,8 @@ class _OrdersScreenState extends State<OrdersScreen> {
                       ],
                     ),
                   ),
+
+                  // Sous-total
                   Text(
                     '${item.subtotal.toStringAsFixed(2)} ${localizations.currency}',
                     style: const TextStyle(
@@ -355,6 +388,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
             );
           }).toList() ?? [],
 
+          // Message pour les produits supplémentaires
           if ((order.items?.length ?? 0) > 2)
             Padding(
               padding: const EdgeInsets.only(bottom: 8),
@@ -370,9 +404,11 @@ class _OrdersScreenState extends State<OrdersScreen> {
 
           const Divider(height: 20),
 
+          // Total et boutons d'action
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
+              // Total
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -393,11 +429,15 @@ class _OrdersScreenState extends State<OrdersScreen> {
                   ),
                 ],
               ),
+
+              // Boutons d'action selon le statut
               if (order.status == 'pending')
                 Row(
                   children: [
                     OutlinedButton(
-                      onPressed: () {},
+                      onPressed: () {
+                        // TODO: Implémenter l'annulation
+                      },
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Colors.red,
                         side: const BorderSide(color: Colors.red),
@@ -410,7 +450,9 @@ class _OrdersScreenState extends State<OrdersScreen> {
                     ),
                     const SizedBox(width: 8),
                     ElevatedButton(
-                      onPressed: () {},
+                      onPressed: () {
+                        // TODO: Implémenter la confirmation
+                      },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.green,
                         foregroundColor: Colors.white,
@@ -425,13 +467,16 @@ class _OrdersScreenState extends State<OrdersScreen> {
                 )
               else if (order.status == 'confirmed')
                 ElevatedButton(
-                  onPressed: () {},
+                  onPressed: () {
+                    // TODO: Implémenter la livraison
+                  },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   ),
                   child: Text(localizations.delivered),
                 ),

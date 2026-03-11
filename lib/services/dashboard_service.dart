@@ -6,12 +6,18 @@ import '../models/product.dart';
 import '../models/order.dart';
 import '../utils/constants.dart';
 import 'auth_service.dart';
+import 'order_service.dart';  // 👈 AJOUTER CET IMPORT
 import '../l10n/app_localizations.dart';
 
 class DashboardService extends ChangeNotifier {
   // Statistiques
   int _totalOrders = 0;
   int _pendingOrders = 0;
+  int _confirmedOrders = 0;
+  int _preparingOrders = 0;
+  int _deliveringOrders = 0;
+  int _deliveredOrders = 0;
+  int _cancelledOrders = 0;
   double _totalSales = 0.0;
   int _outOfStockProducts = 0;
 
@@ -30,6 +36,11 @@ class DashboardService extends ChangeNotifier {
   // Getters
   int get totalOrders => _totalOrders;
   int get pendingOrders => _pendingOrders;
+  int get confirmedOrders => _confirmedOrders;
+  int get preparingOrders => _preparingOrders;
+  int get deliveringOrders => _deliveringOrders;
+  int get deliveredOrders => _deliveredOrders;
+  int get cancelledOrders => _cancelledOrders;
   double get totalSales => _totalSales;
   int get outOfStockProducts => _outOfStockProducts;
   List<Map<String, dynamic>> get recentTransactions => _recentTransactions;
@@ -81,7 +92,6 @@ class DashboardService extends ChangeNotifier {
   // Formater en dirhams marocain
   String formatMAD(double amount, BuildContext context) {
     final localizations = AppLocalizations.of(context)!;
-    // Format: 1.234,56 MAD ou ١٬٢٣٤٫٥٦ درهم
     return '${amount.toStringAsFixed(2).replaceAll('.', ',')} ${localizations.currency}';
   }
 
@@ -90,72 +100,86 @@ class DashboardService extends ChangeNotifier {
     _clearError();
 
     try {
-      // Récupérer les commandes du fournisseur
-      final ordersResponse = await http.get(
-        Uri.parse('${AppConstants.baseUrl}/supplier/orders?page=1&per_page=100'),
+      // ✅ 1. Récupérer les STATISTIQUES depuis l'API
+      final statsResponse = await http.get(
+        Uri.parse('${AppConstants.baseUrl}/supplier/orders/stats'),
         headers: _headers,
       );
 
-      // Récupérer les produits du fournisseur
+      // ✅ 2. Récupérer les commandes récentes
+      final ordersResponse = await http.get(
+        Uri.parse('${AppConstants.baseUrl}/supplier/orders?page=1&per_page=5'),
+        headers: _headers,
+      );
+
+      // ✅ 3. Récupérer les produits
       final productsResponse = await http.get(
         Uri.parse('${AppConstants.baseUrl}/supplier/products?page=1&per_page=100'),
         headers: _headers,
       );
 
-      if (ordersResponse.statusCode == 200 && productsResponse.statusCode == 200) {
-        final ordersData = json.decode(ordersResponse.body);
-        final productsData = json.decode(productsResponse.body);
-        print('📊 ordersData keys: ${ordersData.keys}');
-        if (ordersData['data'] != null) {
-          print('📊 ordersData["data"] keys: ${ordersData['data'].keys}');
-        }
+      // ✅ Traiter les statistiques
+      if (statsResponse.statusCode == 200) {
+        final statsData = json.decode(statsResponse.body);
+        if (statsData['success'] && statsData['data'] != null) {
+          final stats = statsData['data'];
 
+          _totalOrders = _toInt(stats['total_orders']);
+          _pendingOrders = _toInt(stats['pending_orders']);
+          _confirmedOrders = _toInt(stats['confirmed_orders']);
+          _preparingOrders = _toInt(stats['preparing_orders']);
+          _deliveringOrders = _toInt(stats['delivering_orders']);
+          _deliveredOrders = _toInt(stats['delivered_orders']);
+          _cancelledOrders = _toInt(stats['cancelled_orders']);
+          _totalSales = _toDouble(stats['total_revenue']);
+
+          print('📊 Stats dashboard chargées: $_totalOrders commandes, $_totalSales MAD');
+        }
+      }
+
+      // ✅ Traiter les commandes récentes
+      if (ordersResponse.statusCode == 200) {
+        final ordersData = json.decode(ordersResponse.body);
         final List orders = ordersData['data']['data'] ?? ordersData['data'] ?? [];
+
+        _recentTransactions = orders.map((order) {
+          double montant = _toDouble(order['amount_total'] ?? order['total']);
+
+          // Récupérer le nom du client
+          String clientName = 'Client';
+          if (order['customer'] != null) {
+            clientName = order['customer']['name'] ??
+                order['customer']['company_name'] ??
+                'Client';
+          } else if (order['partner'] != null) {
+            clientName = order['partner']['name'] ?? 'Client';
+          }
+
+          return {
+            'clientName': clientName,
+            'commandeRef': order['order_number'] ?? order['name'] ?? 'Commande',
+            'montant': montant,
+            'statut': order['status'] ?? 'pending',
+            'timeInfo': _formatTimeAgo(order['created_at']),
+            'isDelayed': order['status'] == 'pending',
+          };
+        }).toList();
+
+        print('📦 Commandes récentes: ${_recentTransactions.length}');
+      }
+
+      // ✅ Traiter les produits
+      if (productsResponse.statusCode == 200) {
+        final productsData = json.decode(productsResponse.body);
         final List products = productsData['data']['data'] ?? productsData['data'] ?? [];
 
-        print('📊 Nombre de commandes: ${orders.length}');
-        print('📊 Nombre de produits: ${products.length}');
-
-        // Calculer les statistiques
-        _totalOrders = orders.length;
-        _pendingOrders = orders.where((o) {
-          String status = o['status'] ?? o['delivery_status'] ?? '';
-          return status == 'pending';
-        }).length;
-
-        // 👇 CORRECTION: Utiliser _toDouble au lieu de toDouble() direct
-        _totalSales = orders.fold(0.0, (sum, order) {
-          return sum + _toDouble(order['amount_total']);
-        });
-
-        // Produits en rupture (stock < seuil min)
+        // Calculer les produits en rupture
         _outOfStockProducts = products.where((p) {
           int stock = _toInt(p['stock_quantity']);
           int minStock = _toInt(p['min_stock_alert']);
-          if (minStock == 0) minStock = 5; // Valeur par défaut
+          if (minStock == 0) minStock = 5;
           return stock <= minStock;
         }).length;
-
-        // Transactions récentes (les 5 dernières commandes)
-        final recentOrders = orders.take(5).toList();
-        _recentTransactions = recentOrders.map((order) {
-          // 👇 CORRECTION: Utiliser _toDouble pour le montant
-          double montant = _toDouble(order['amount_total']);
-
-          return {
-            'clientName': order['partner']?['name'] ??
-                order['customer']?['name'] ??
-                order['customer_name'] ??
-                'Client',
-            'commandeRef': order['name'] ??
-                order['order_number'] ??
-                'Commande ${order['id']}',
-            'montant': montant,
-            'statut': order['status'] ?? order['delivery_status'] ?? 'pending',
-            'timeInfo': _formatTimeAgo(order['created_at'] ?? order['create_date']),
-            'isDelayed': (order['status'] ?? order['delivery_status']) != 'delivered',
-          };
-        }).toList();
 
         // Produits populaires (triés par popular_rank)
         final sortedProducts = List.from(products);
@@ -166,20 +190,21 @@ class DashboardService extends ChangeNotifier {
         });
         _popularProducts = sortedProducts.take(5).map((p) => Product.fromJson(p)).toList();
 
-        // Données du graphique
-        _salesChartData = [
-          {'month': 'Janv.', 'value': 45000.0, 'isActive': false},
-          {'month': 'Fév.', 'value': 38000.0, 'isActive': false},
-          {'month': 'Mars', 'value': 52000.0, 'isActive': true},
-          {'month': 'Avril', 'value': 48000.0, 'isActive': false},
-          {'month': 'Mai', 'value': 63000.0, 'isActive': false},
-          {'month': 'Juin', 'value': 58000.0, 'isActive': false},
-        ];
-
-        notifyListeners();
-      } else {
-        _setError('Erreur de chargement des données');
+        print('📦 Produits chargés: ${products.length}');
       }
+
+      // Données du graphique (simulées pour l'instant)
+      _salesChartData = [
+        {'month': 'Janv.', 'value': 45000.0, 'isActive': false},
+        {'month': 'Fév.', 'value': 38000.0, 'isActive': false},
+        {'month': 'Mars', 'value': 52000.0, 'isActive': true},
+        {'month': 'Avril', 'value': 48000.0, 'isActive': false},
+        {'month': 'Mai', 'value': 63000.0, 'isActive': false},
+        {'month': 'Juin', 'value': 58000.0, 'isActive': false},
+      ];
+
+      notifyListeners();
+
     } catch (e) {
       print('❌ Erreur dashboard: $e');
       _setError('Erreur réseau: ${e.toString()}');
@@ -210,8 +235,10 @@ class DashboardService extends ChangeNotifier {
   }
 
   void _setLoading(bool loading) {
-    _isLoading = loading;
-    notifyListeners();
+    if (_isLoading != loading) {
+      _isLoading = loading;
+      notifyListeners();
+    }
   }
 
   void _clearError() {

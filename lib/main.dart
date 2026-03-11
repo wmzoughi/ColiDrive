@@ -28,6 +28,10 @@ import 'screens/commercant/checkout_screen.dart';
 import 'services/order_service.dart';
 import 'screens/fournisseur/SupplierOrdersScreen.dart';
 
+// 👇 NOUVEAUX IMPORTS POUR LE FLUX MULTIVENDEUR
+import 'screens/commercant/supplier_products_screen.dart';
+import 'screens/commercant/suppliers_screen.dart';
+
 // Services
 import 'services/dashboard_service.dart';
 import 'services/product_service.dart';
@@ -125,21 +129,41 @@ class MyApp extends StatelessWidget {
       },
       initialRoute: '/login',
       routes: {
+        // Auth
         '/login': (context) => const LoginScreen(),
         '/register': (context) => const RegisterScreen(),
         '/forgot-password': (context) => const ForgotPasswordScreen(),
+
+        // Routes commerçant
         '/merchant/dashboard': (context) => const DashboardCommercant(),
         '/merchant/orders': (context) => const OrdersScreen(),
         '/merchant/products': (context) => const ProductsScreen(),
         '/merchant/cart': (context) => const CartScreen(),
         '/merchant/account': (context) => const CompteScreenM(),
         '/merchant/checkout': (context) => const CheckoutScreen(),
+
+        // 👇 NOUVELLES ROUTES POUR LE FLUX MULTIVENDEUR
+        '/merchant/suppliers': (context) => const SuppliersScreen(),
+
+        // Routes fournisseur
         '/supplier/dashboard': (context) => const DashboardFournisseur(),
         '/supplier/products': (context) => const GestionProduitsScreen(),
         '/supplier/account': (context) => const CompteScreenS(),
         '/supplier/orders': (context) => const SupplierOrdersScreen(),
       },
       onGenerateRoute: (settings) {
+        // Route avec paramètres pour les produits d'un fournisseur spécifique
+        if (settings.name == '/merchant/supplier-products') {
+          final args = settings.arguments as Map<String, dynamic>;
+          return MaterialPageRoute(
+            builder: (context) => SupplierProductsScreen(
+              supplierId: args['supplier_id'],
+              supplierName: args['supplier_name'],
+            ),
+          );
+        }
+
+        // Détail d'un produit
         if (settings.name == '/merchant/product-detail') {
           final args = settings.arguments as Map<String, dynamic>;
           return MaterialPageRoute(
@@ -148,11 +172,15 @@ class MyApp extends StatelessWidget {
             ),
           );
         }
+
+        // Checkout (déjà géré par route, mais on garde pour la cohérence)
         if (settings.name == '/merchant/checkout') {
           return MaterialPageRoute(
             builder: (context) => const CheckoutScreen(),
           );
         }
+
+        // Édition d'un produit (fournisseur)
         if (settings.name == '/supplier/product/edit') {
           final args = settings.arguments as Map<String, dynamic>;
           return MaterialPageRoute(
@@ -163,6 +191,7 @@ class MyApp extends StatelessWidget {
             ),
           );
         }
+
         return null;
       },
     );

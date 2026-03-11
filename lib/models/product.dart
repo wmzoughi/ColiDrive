@@ -1,5 +1,7 @@
 // lib/models/product.dart
 import 'dart:convert';
+import 'package:flutter/material.dart';
+
 class Product {
   final int id;
   final String name;
@@ -19,7 +21,7 @@ class Product {
   final double? volume;
   final double? weight;
   final bool active;
-  final String? imageUrl;  // 👈 NOUVEAU CHAMP
+  final String? imageUrl;
   final int? stockQuantity;
   final int? minStockAlert;
   final int? maxStockAlert;
@@ -78,8 +80,8 @@ class Product {
 
     return Product(
       id: json['id'],
-      name: _extractText(json['name']),  // 👈 Correction ici
-      description: _extractText(json['description']),  // 👈 Correction ici
+      name: _extractText(json['name']),
+      description: _extractText(json['description']),
       listPrice: (json['list_price'] ?? 0).toDouble(),
       packaging: json['packaging'],
       isPromotion: json['is_promotion'] ?? false,
@@ -106,6 +108,7 @@ class Product {
     );
   }
 
+  // Prix actuel (avec promotion si applicable)
   double get currentPrice {
     final now = DateTime.now();
     if (isPromotion &&
@@ -118,6 +121,7 @@ class Product {
     return listPrice;
   }
 
+  // Vérifier si le produit est en promotion
   bool get isInPromotion {
     final now = DateTime.now();
     return isPromotion &&
@@ -125,5 +129,56 @@ class Product {
         promotionEnd != null &&
         promotionStart!.isBefore(now) &&
         promotionEnd!.isAfter(now);
+  }
+
+  // 👇 AJOUTEZ CETTE PROPRIÉTÉ
+  // Pourcentage de réduction
+  int get discountPercentage {
+    if (!isInPromotion || promotionPrice == null || promotionPrice! >= listPrice) {
+      return 0;
+    }
+    double discount = ((listPrice - promotionPrice!) / listPrice * 100).roundToDouble();
+    return discount.toInt();
+  }
+
+  // Ancien prix (pour affichage barré)
+  double? get oldPrice {
+    return isInPromotion ? listPrice : null;
+  }
+
+  // Vérifier si le produit est en stock
+  bool get isInStock {
+    if (stockQuantity == null) return true;
+    return stockQuantity! > 0;
+  }
+
+  // Vérifier si le stock est faible
+  bool get isLowStock {
+    if (stockQuantity == null) return false;
+    return stockQuantity! > 0 && stockQuantity! <= (minStockAlert ?? 5);
+  }
+
+  // Statut du stock en texte
+  String get stockStatus {
+    if (stockQuantity == null) return 'Inconnu';
+    if (stockQuantity! <= 0) return 'Rupture';
+    if (stockQuantity! <= (minStockAlert ?? 5)) return 'Stock faible';
+    return 'En stock';
+  }
+
+  // Couleur du statut de stock
+  Color get stockStatusColor {
+    if (stockQuantity == null) return Colors.grey;
+    if (stockQuantity! <= 0) return Colors.red;
+    if (stockQuantity! <= (minStockAlert ?? 5)) return Colors.orange;
+    return Colors.green;
+  }
+
+  // Icône du statut de stock
+  IconData get stockStatusIcon {
+    if (stockQuantity == null) return Icons.help_outline;
+    if (stockQuantity! <= 0) return Icons.error;
+    if (stockQuantity! <= (minStockAlert ?? 5)) return Icons.warning;
+    return Icons.check_circle;
   }
 }

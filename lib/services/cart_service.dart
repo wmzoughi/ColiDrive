@@ -59,7 +59,112 @@ class CartService extends ChangeNotifier {
     return headers;
   }
 
-  // Charger le panier depuis l'API
+  // ✅ REGROUPER LES ARTICLES PAR FOURNISSEUR
+  Map<int, Map<String, dynamic>> getItemsBySupplier() {
+    Map<int, Map<String, dynamic>> result = {};
+
+    for (var item in _items) {
+      int supplierId = item.product.supplierId;
+      String supplierName = item.product.supplierName ?? 'Fournisseur';
+
+      if (!result.containsKey(supplierId)) {
+        result[supplierId] = {
+          'supplier_id': supplierId,
+          'supplier_name': supplierName,
+          'items': <CartItem>[],
+          'subtotal': 0.0,
+          'item_count': 0,
+        };
+      }
+
+      result[supplierId]!['items'].add(item);
+      result[supplierId]!['subtotal'] += item.totalPrice;
+      result[supplierId]!['item_count'] += item.quantity;
+    }
+
+    return result;
+  }
+
+  // ✅ OBTENIR LE NOMBRE DE FOURNISSEURS DANS LE PANIER
+  int get supplierCount {
+    return getItemsBySupplier().length;
+  }
+
+  // ✅ OBTENIR LE SOUS-TOTAL PAR FOURNISSEUR
+  Map<int, double> getSubtotalsBySupplier() {
+    Map<int, double> result = {};
+
+    for (var item in _items) {
+      int supplierId = item.product.supplierId;
+      result[supplierId] = (result[supplierId] ?? 0) + item.totalPrice;
+    }
+
+    return result;
+  }
+
+  // ✅ VÉRIFIER SI LE PANIER CONTIENT DES PRODUITS D'UN FOURNISSEUR SPÉCIFIQUE
+  bool hasProductsFromSupplier(int supplierId) {
+    return _items.any((item) => item.product.supplierId == supplierId);
+  }
+
+  // ✅ OBTENIR LES ARTICLES D'UN FOURNISSEUR SPÉCIFIQUE
+  List<CartItem> getItemsBySupplierId(int supplierId) {
+    return _items.where((item) => item.product.supplierId == supplierId).toList();
+  }
+
+  // ✅ SUPPRIMER TOUS LES ARTICLES D'UN FOURNISSEUR
+  Future<void> removeSupplierItems(int supplierId) async {
+    final itemsToRemove = getItemsBySupplierId(supplierId);
+
+    for (var item in itemsToRemove) {
+      await removeFromCart(item.id);
+    }
+  }
+
+  // ✅ OBTENIR LE RÉCAPITULATIF PAR FOURNISSEUR POUR LE CHECKOUT
+  List<Map<String, dynamic>> getCheckoutSummaryBySupplier() {
+    Map<int, Map<String, dynamic>> bySupplier = {};
+
+    for (var item in _items) {
+      int supplierId = item.product.supplierId;
+
+      if (!bySupplier.containsKey(supplierId)) {
+        bySupplier[supplierId] = {
+          'supplier_id': supplierId,
+          'supplier_name': item.product.supplierName ?? 'Fournisseur',
+          'items': <CartItem>[],
+          'subtotal': 0.0,
+          'tax': 0.0,
+          'shipping': 50.0, // Frais de livraison par fournisseur
+          'total': 0.0,
+        };
+      }
+
+      bySupplier[supplierId]!['items'].add(item);
+      bySupplier[supplierId]!['subtotal'] += item.totalPrice;
+    }
+
+    // Calculer les totaux pour chaque fournisseur
+    return bySupplier.values.map((supplier) {
+      double subtotal = supplier['subtotal'];
+      double tax = subtotal * 0.20; // TVA 20%
+      double shipping = supplier['shipping'];
+      double total = subtotal + tax + shipping;
+
+      return {
+        'supplier_id': supplier['supplier_id'],
+        'supplier_name': supplier['supplier_name'],
+        'items': supplier['items'],
+        'subtotal': subtotal,
+        'tax': tax,
+        'shipping': shipping,
+        'total': total,
+        'item_count': supplier['items'].fold(0, (sum, item) => sum + item.quantity),
+      };
+    }).toList();
+  }
+
+  // ✅ CHARGER LE PANIER DEPUIS L'API
   Future<void> loadCart() async {
     print('🔄 ===== CHARGEMENT DU PANIER =====');
     print('📤 Session ID: $_sessionId');
@@ -93,7 +198,7 @@ class CartService extends ChangeNotifier {
           return CartItem.fromJson(itemJson);
         }).toList();
 
-        print('✅ Panier chargé: ${_items.length} articles');
+        print('✅ Panier chargé: ${_items.length} articles de $supplierCount fournisseur(s)');
         notifyListeners();
       } else {
         print('❌ Erreur chargement panier: ${data['message']}');
@@ -106,7 +211,7 @@ class CartService extends ChangeNotifier {
     }
   }
 
-  // Ajouter au panier
+  // ✅ AJOUTER AU PANIER
   Future<bool> addToCart(Product product, {int quantity = 1}) async {
     _setLoading(true);
     _clearError();
@@ -142,7 +247,7 @@ class CartService extends ChangeNotifier {
     }
   }
 
-  // Mettre à jour la quantité
+  // ✅ METTRE À JOUR LA QUANTITÉ
   Future<bool> updateQuantity(int cartItemId, int quantity) async {
     if (quantity <= 0) {
       return removeFromCart(cartItemId);
@@ -171,7 +276,7 @@ class CartService extends ChangeNotifier {
     }
   }
 
-  // Supprimer du panier
+  // ✅ SUPPRIMER DU PANIER
   Future<bool> removeFromCart(int cartItemId) async {
     _setLoading(true);
 
@@ -195,7 +300,7 @@ class CartService extends ChangeNotifier {
     }
   }
 
-  // Vider le panier
+  // ✅ VIDER LE PANIER
   Future<bool> clearCart() async {
     _setLoading(true);
 
@@ -220,10 +325,11 @@ class CartService extends ChangeNotifier {
     }
   }
 
+  // ✅ RÉCAPITULATIF GLOBAL
   Map<String, double> getCheckoutSummary() {
     final subtotal = this.subtotal;
     final tax = subtotal * 0.20; // TVA 20%
-    final shippingCost = 50.0; // Frais fixes
+    final shippingCost = 50.0 * supplierCount; // Frais fixes par fournisseur
     final total = subtotal + tax + shippingCost;
 
     return {
@@ -231,36 +337,38 @@ class CartService extends ChangeNotifier {
       'tax': tax,
       'shipping': shippingCost,
       'total': total,
+      'supplier_count': supplierCount.toDouble(),
     };
   }
 
-  // Méthodes locales (sans API) pour mise à jour instantanée
-  void incrementQuantity(int cartItemId) {
-    final index = _items.indexWhere((item) => item.id == cartItemId);
+  // ✅ MÉTHODES LOCALES POUR MISE À JOUR INSTANTANÉE
+  void incrementQuantity(int productId) {
+    // Trouver l'item par productId (pas par cartItemId)
+    final index = _items.indexWhere((item) => item.product.id == productId);
     if (index >= 0) {
       _items[index].quantity++;
       notifyListeners();
       // Sauvegarde en base via API
-      updateQuantity(cartItemId, _items[index].quantity);
+      updateQuantity(_items[index].id, _items[index].quantity);
     }
   }
 
-  void decrementQuantity(int cartItemId) {
-    final index = _items.indexWhere((item) => item.id == cartItemId);
+  void decrementQuantity(int productId) {
+    final index = _items.indexWhere((item) => item.product.id == productId);
     if (index >= 0) {
       if (_items[index].quantity > 1) {
         _items[index].quantity--;
         notifyListeners();
-        updateQuantity(cartItemId, _items[index].quantity);
+        updateQuantity(_items[index].id, _items[index].quantity);
       } else {
-        removeFromCart(cartItemId);
+        removeFromCart(_items[index].id);
       }
     }
   }
 
   bool get isEmpty => _items.isEmpty;
 
-  // ✅ NOUVELLE MÉTHODE POUR VIDER LE PANIER LOCAL
+  // ✅ VIDER LE PANIER LOCAL
   void clearLocalCart() {
     _items.clear();
     _cartId = null;
