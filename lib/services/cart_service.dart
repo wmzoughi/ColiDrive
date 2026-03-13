@@ -373,6 +373,7 @@ class CartService extends ChangeNotifier {
     _items.clear();
     _cartId = null;
     notifyListeners();
+    print('✅ Panier local vidé');
   }
 
   void _setLoading(bool loading) {

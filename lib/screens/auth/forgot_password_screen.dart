@@ -1,8 +1,10 @@
-// lib/screens/auth/forgot_password_screen.dart
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../services/auth_service.dart';
 import '../../utils/constants.dart';
 import '../../widgets/custom_button.dart';
 import '../../l10n/app_localizations.dart';
+import 'dart:async';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({Key? key}) : super(key: key);
@@ -14,32 +16,197 @@ class ForgotPasswordScreen extends StatefulWidget {
 class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
-  bool _isLoading = false;
-  bool _isSent = false;
+  final _codeController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+
+  final List<FocusNode> _codeFocusNodes = List.generate(6, (index) => FocusNode());
+  final List<TextEditingController> _codeControllers = List.generate(6, (index) => TextEditingController());
+
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
+  int _step = 1; // 1: email, 2: code, 3: nouveau mot de passe
+  int _resendSeconds = 60;
+  Timer? _resendTimer;
+  bool _canResend = false;
+
 
   @override
   void dispose() {
     _emailController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    _codeController.dispose();
+    for (var controller in _codeControllers) {
+      controller.dispose();
+    }
+    for (var node in _codeFocusNodes) {
+      node.dispose();
+    }
+    _resendTimer?.cancel();
     super.dispose();
   }
 
-  Future<void> _handleReset() async {
+  void _startResendTimer() {
+    setState(() {
+      _canResend = false;
+      _resendSeconds = 60;
+    });
+
+    _resendTimer?.cancel();
+    _resendTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_resendSeconds <= 1) {
+        timer.cancel();
+        setState(() {
+          _canResend = true;
+        });
+      } else {
+        setState(() {
+          _resendSeconds--;
+        });
+      }
+    });
+  }
+
+  void _onCodeChanged(int index, String value) {
+    if (value.isNotEmpty && index < 5) {
+      FocusScope.of(context).requestFocus(_codeFocusNodes[index + 1]);
+    } else if (value.isEmpty && index > 0) {
+      FocusScope.of(context).requestFocus(_codeFocusNodes[index - 1]);
+    }
+
+    if (_codeControllers.every((c) => c.text.isNotEmpty)) {
+      _verifyCode();
+    }
+  }
+
+  Future<void> _sendResetCode() async {
     if (_formKey.currentState?.validate() ?? false) {
-      setState(() {
-        _isLoading = true;
-      });
+      final authService = Provider.of<AuthService>(context, listen: false);
+      final result = await authService.forgotPassword(_emailController.text);
 
-      await Future.delayed(const Duration(seconds: 2));
+      if (result['success']) {
+        setState(() => _step = 2);
+        _startResendTimer();
 
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Code envoyé à ${_emailController.text}'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] ?? 'Erreur'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _verifyCode() async {
+    // Récupérer le code des 6 cases
+    String code = '';
+    for (var controller in _codeControllers) {
+      code += controller.text;
+    }
+
+    if (code.length != 6) return;
+
+    final authService = Provider.of<AuthService>(context, listen: false);
+    final result = await authService.verifyResetCode(_emailController.text, code);
+
+    if (result['success']) {
       setState(() {
-        _isLoading = false;
-        _isSent = true;
+        _step = 3;  // Passer à l'étape 3 (nouveau mot de passe)
       });
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result['message'] ?? 'Code invalide'),
+          backgroundColor: Colors.red,
+        ),
+      );
+
+      // Vider les cases
+      for (var controller in _codeControllers) {
+        controller.clear();
+      }
+    }
+  }
+
+  Future<void> _resetPassword() async {
+    // Vérifier que le mot de passe est valide
+    if (_passwordController.text.length < 8) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Minimum 8 caractères'), backgroundColor: Colors.red),
+      );
+      return;
+    }
+
+    // Vérifier que les mots de passe correspondent
+    if (_passwordController.text != _confirmPasswordController.text) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Les mots de passe ne correspondent pas'), backgroundColor: Colors.red),
+      );
+      return;
+    }
+
+    // Récupérer le code depuis les 6 cases
+    String code = '';
+    for (var controller in _codeControllers) {
+      code += controller.text;
+    }
+
+    // Appeler l'API
+    final authService = Provider.of<AuthService>(context, listen: false);
+    final result = await authService.resetPassword(
+      email: _emailController.text,
+      code: code,  // ← On utilise le code, pas le token
+      password: _passwordController.text,
+      passwordConfirmation: _confirmPasswordController.text,
+    );
+
+    if (result['success']) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Mot de passe modifié avec succès'),
+          backgroundColor: Colors.green,
+        ),
+      );
+      Navigator.popUntil(context, (route) => route.isFirst);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result['message'] ?? 'Erreur'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _resendCode() async {
+    if (!_canResend) return;
+
+    final authService = Provider.of<AuthService>(context, listen: false);
+    final result = await authService.forgotPassword(_emailController.text);
+
+    if (result['success']) {
+      _startResendTimer();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Nouveau code envoyé'),
+          backgroundColor: AppColors.success,
+        ),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final authService = Provider.of<AuthService>(context);
     final localizations = AppLocalizations.of(context)!;
 
     return Scaffold(
@@ -49,152 +216,129 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: AppColors.textDark),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => _step == 1 ? Navigator.pop(context) : setState(() => _step--),
         ),
         title: Text(
-          localizations.forgotPassword,
-          style: TextStyle(
-            color: AppColors.textDark,
-            fontWeight: FontWeight.bold,
-          ),
+          _step == 1 ? localizations.forgotPassword :
+          _step == 2 ? 'Vérification' : 'Nouveau mot de passe',
+          style: TextStyle(color: AppColors.textDark, fontWeight: FontWeight.bold),
         ),
       ),
       body: Padding(
         padding: const EdgeInsets.all(24),
-        child: _isSent ? _buildSuccessScreen() : _buildResetForm(),
+        child: authService.isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : _step == 1 ? _buildEmailStep(localizations) :
+        _step == 2 ? _buildCodeStep() :
+        _buildPasswordStep(localizations),
       ),
     );
   }
 
-  Widget _buildResetForm() {
-    final localizations = AppLocalizations.of(context)!;
-
+  Widget _buildEmailStep(AppLocalizations localizations) {
     return Form(
       key: _formKey,
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           const SizedBox(height: 30),
-
-          Container(
-            width: 250,
-            height: 150,
-            child: Image.asset(
-              'assets/icons/logo.png',
-              width: 250,
-              height: 150,
-              fit: BoxFit.contain,
-              errorBuilder: (context, error, stackTrace) {
-                return Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Center(
-                    child: Text(
-                      'CD',
-                      style: const TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-
-          const SizedBox(height: 30),
-
-          Text(
-            localizations.forgotPassword,
-            style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textDark,
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          Image.asset(
-            'assets/images/forgetPWD.png',
-            height: 120,
-            fit: BoxFit.contain,
-          ),
-
+          Image.asset('assets/images/forgetPWD.png', height: 120),
           const SizedBox(height: 40),
-
           Align(
             alignment: Alignment.centerLeft,
-            child: Text(
-              localizations.email,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textDark,
-              ),
-            ),
+            child: Text(localizations.email, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
           ),
           const SizedBox(height: 8),
-
           TextFormField(
             controller: _emailController,
             keyboardType: TextInputType.emailAddress,
             decoration: InputDecoration(
               hintText: localizations.emailHint,
               prefixIcon: Icon(Icons.email_outlined, color: AppColors.primary),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
             ),
             validator: (value) {
-              if (value == null || value.isEmpty) {
-                return localizations.emailRequired;
-              }
-              if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
-                return localizations.invalidEmail;
-              }
+              if (value == null || value.isEmpty) return localizations.emailRequired;
+              if (!value.contains('@')) return localizations.invalidEmail;
               return null;
             },
           ),
-
           const SizedBox(height: 30),
-
           CustomButton(
-            text: localizations.confirm,
-            onPressed: _handleReset,
-            isLoading: _isLoading,
-          ),
-
-          const SizedBox(height: 20),
-
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              localizations.loginButton,
-              style: TextStyle(
-                color: AppColors.primary,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+            text: 'Envoyer le code',
+            onPressed: _sendResetCode,
+            isLoading: false,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildSuccessScreen() {
-    final localizations = AppLocalizations.of(context)!;
-
+  Widget _buildCodeStep() {
     return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const SizedBox(height: 40),
+        const SizedBox(height: 20),
+        Container(
+          width: 100,
+          height: 100,
+          decoration: BoxDecoration(
+            color: AppColors.primary.withOpacity(0.1),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(Icons.mark_email_read, size: 50, color: AppColors.primary),
+        ),
+        const SizedBox(height: 24),
+        Text('Vérification', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 12),
+        Text('Code envoyé à', style: TextStyle(color: Colors.grey.shade600)),
+        Text(_emailController.text, style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
+        const SizedBox(height: 32),
 
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: List.generate(6, (index) => SizedBox(
+            width: 45,
+            height: 55,
+            child: TextFormField(
+              controller: _codeControllers[index],
+              focusNode: _codeFocusNodes[index],
+              textAlign: TextAlign.center,
+              keyboardType: TextInputType.number,
+              maxLength: 1,
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              decoration: InputDecoration(
+                counterText: '',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              onChanged: (value) => _onCodeChanged(index, value),
+            ),
+          )),
+        ),
+        const SizedBox(height: 24),
+
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text('Code non reçu ? '),
+            GestureDetector(
+              onTap: _canResend ? _resendCode : null,
+              child: Text(
+                _canResend ? 'Renvoyer' : 'Renvoyer dans $_resendSeconds s',
+                style: TextStyle(
+                  color: _canResend ? AppColors.primary : Colors.grey.shade400,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPasswordStep(AppLocalizations localizations) {
+    return Column(
+      children: [
+        const SizedBox(height: 30),
         Container(
           width: 100,
           height: 100,
@@ -202,77 +346,46 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             color: AppColors.success.withOpacity(0.1),
             shape: BoxShape.circle,
           ),
-          child: Icon(
-            Icons.check_circle,
-            size: 50,
-            color: AppColors.success,
-          ),
+          child: Icon(Icons.lock_outline, size: 50, color: AppColors.success),
         ),
-
+        const SizedBox(height: 24),
+        Text('Nouveau mot de passe', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
         const SizedBox(height: 30),
 
-        Text(
-          localizations.confirm,
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: AppColors.textDark,
+        TextFormField(
+          controller: _passwordController,
+          obscureText: _obscurePassword,
+          decoration: InputDecoration(
+            hintText: localizations.passwordHint,
+            prefixIcon: Icon(Icons.lock_outline, color: AppColors.primary),
+            suffixIcon: IconButton(
+              icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility),
+              onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+            ),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
           ),
         ),
-
         const SizedBox(height: 16),
 
-        Text(
-          'Un e-mail a été envoyé à',
-          style: TextStyle(
-            fontSize: 16,
-            color: Colors.grey.shade600,
-          ),
-        ),
-
-        Text(
-          _emailController.text,
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: AppColors.primary,
-          ),
-        ),
-
-        const SizedBox(height: 8),
-
-        Text(
-          localizations.search,
-          style: TextStyle(
-            fontSize: 14,
-            color: Colors.grey.shade500,
-          ),
-        ),
-
-        const SizedBox(height: 40),
-
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton(
-            onPressed: () {
-              Navigator.popUntil(context, (route) => route.isFirst);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-              minimumSize: const Size(double.infinity, 50),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
+        TextFormField(
+          controller: _confirmPasswordController,
+          obscureText: _obscureConfirmPassword,
+          decoration: InputDecoration(
+            hintText: localizations.confirm,
+            prefixIcon: Icon(Icons.lock_outline, color: AppColors.primary),
+            suffixIcon: IconButton(
+              icon: Icon(_obscureConfirmPassword ? Icons.visibility_off : Icons.visibility),
+              onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
             ),
-            child: Text(
-              localizations.loginButton,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
           ),
+        ),
+        const SizedBox(height: 30),
+
+        CustomButton(
+          text: 'Confirmer',
+          onPressed: _resetPassword,
+          isLoading: false,
         ),
       ],
     );

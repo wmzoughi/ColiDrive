@@ -7,6 +7,7 @@ import '../../utils/constants.dart';
 import '../../widgets/custom_button.dart';
 import '../../l10n/app_localizations.dart';
 import 'login_screen.dart';
+import 'dart:async';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({Key? key}) : super(key: key);
@@ -16,6 +17,7 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
+  // Formulaire principal
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
@@ -25,12 +27,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _siretController = TextEditingController();
   final _companyController = TextEditingController();
 
+  // Code de vérification
+  final _codeController = TextEditingController();
+  final List<FocusNode> _codeFocusNodes = List.generate(6, (index) => FocusNode());
+  final List<TextEditingController> _codeControllers = List.generate(6, (index) => TextEditingController());
+
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _acceptTerms = false;
   String? _userType = 'commercant';
 
   Map<String, dynamic>? _fieldErrors;
+
+  // État de vérification
+  bool _showVerification = false;
+  String? _currentEmail;
+  int _resendSeconds = 60;
+  Timer? _resendTimer;
+  bool _canResend = false;
 
   @override
   void dispose() {
@@ -41,16 +55,58 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _confirmPasswordController.dispose();
     _siretController.dispose();
     _companyController.dispose();
+    _codeController.dispose();
+    for (var controller in _codeControllers) {
+      controller.dispose();
+    }
+    for (var node in _codeFocusNodes) {
+      node.dispose();
+    }
+    _resendTimer?.cancel();
     super.dispose();
   }
 
-  Future<void> _handleRegister() async {
+  void _startResendTimer() {
+    setState(() {
+      _canResend = false;
+      _resendSeconds = 60;
+    });
+
+    _resendTimer?.cancel();
+    _resendTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_resendSeconds <= 1) {
+        timer.cancel();
+        setState(() {
+          _canResend = true;
+        });
+      } else {
+        setState(() {
+          _resendSeconds--;
+        });
+      }
+    });
+  }
+
+  void _onCodeChanged(int index, String value) {
+    if (value.isNotEmpty && index < 5) {
+      FocusScope.of(context).requestFocus(_codeFocusNodes[index + 1]);
+    } else if (value.isEmpty && index > 0) {
+      FocusScope.of(context).requestFocus(_codeFocusNodes[index - 1]);
+    }
+
+    // Vérifier si tous les champs sont remplis
+    if (_codeControllers.every((c) => c.text.isNotEmpty)) {
+      _verifyCode();
+    }
+  }
+
+  Future<void> _sendVerificationCode() async {
     final localizations = AppLocalizations.of(context)!;
 
     if (!_acceptTerms) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(localizations.emailRequired),
+          content: Text('Vous devez accepter les conditions'),
           backgroundColor: AppColors.error,
         ),
       );
@@ -71,29 +127,109 @@ class _RegisterScreenState extends State<RegisterScreen> {
       };
 
       final authService = Provider.of<AuthService>(context, listen: false);
-      final result = await authService.register(userData);
+      final result = await authService.sendVerificationCode(userData);
 
       if (result['success'] && mounted) {
+        setState(() {
+          _showVerification = true;
+          _currentEmail = _emailController.text;
+        });
+
+        _startResendTimer();
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(localizations.confirm),
+            content: Text('Code de vérification envoyé à ${_emailController.text}'),
             backgroundColor: AppColors.success,
-            duration: const Duration(seconds: 2),
+            duration: const Duration(seconds: 3),
           ),
-        );
-
-        await Future.delayed(const Duration(seconds: 1));
-
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const LoginScreen()),
         );
       } else {
         setState(() {
           _fieldErrors = result['errors'];
         });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] ?? 'Erreur lors de l\'envoi'),
+            backgroundColor: AppColors.error,
+          ),
+        );
       }
     }
+  }
+
+  Future<void> _verifyCode() async {
+    final code = _codeControllers.map((c) => c.text).join();
+
+    if (code.length != 6) return;
+
+    final authService = Provider.of<AuthService>(context, listen: false);
+    final result = await authService.verifyCodeAndRegister(_currentEmail!, code);
+
+    if (result['success'] && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Inscription réussie !'),
+          backgroundColor: AppColors.success,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+
+      // Rediriger vers le dashboard approprié
+      await Future.delayed(const Duration(seconds: 1));
+
+      final user = authService.currentUser;
+      if (user?.userType == 'commercant') {
+        Navigator.pushReplacementNamed(context, '/merchant/dashboard');
+      } else {
+        Navigator.pushReplacementNamed(context, '/supplier/dashboard');
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result['message'] ?? 'Code invalide'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+
+      // Vider les champs de code
+      for (var controller in _codeControllers) {
+        controller.clear();
+      }
+      FocusScope.of(context).requestFocus(_codeFocusNodes[0]);
+    }
+  }
+
+  Future<void> _resendCode() async {
+    if (!_canResend) return;
+
+    final authService = Provider.of<AuthService>(context, listen: false);
+    final result = await authService.resendCode(_currentEmail!);
+
+    if (result['success']) {
+      _startResendTimer();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Nouveau code envoyé'),
+          backgroundColor: AppColors.success,
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result['message'] ?? 'Erreur'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    }
+  }
+
+  void _goBackToForm() {
+    setState(() {
+      _showVerification = false;
+    });
+    _resendTimer?.cancel();
   }
 
   @override
@@ -108,11 +244,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: AppColors.textDark),
-          onPressed: () => Navigator.pop(context),
+          icon: Icon(
+            _showVerification ? Icons.arrow_back : Icons.arrow_back,
+            color: AppColors.textDark,
+          ),
+          onPressed: _showVerification ? _goBackToForm : () => Navigator.pop(context),
         ),
         title: Text(
-          localizations.registerButton,
+          _showVerification ? 'Vérification' : localizations.registerButton,
           style: TextStyle(
             color: AppColors.textDark,
             fontWeight: FontWeight.bold,
@@ -121,478 +260,523 @@ class _RegisterScreenState extends State<RegisterScreen> {
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
-        child: Consumer<AuthService>(
-          builder: (context, authService, child) {
-            return Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+        child: _showVerification ? _buildVerificationSection(context) : _buildRegistrationForm(context, authService, languageService, localizations),
+      ),
+    );
+  }
+
+  Widget _buildRegistrationForm(BuildContext context, AuthService authService, LanguageService languageService, AppLocalizations localizations) {
+    return Form(
+      key: _formKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 250,
+              height: 150,
+              child: Image.asset(
+                'assets/icons/logo.png',
+                width: 250,
+                height: 150,
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Center(
+                      child: Text(
+                        'CD',
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          Center(
+            child: Text(
+              localizations.registerButton,
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textDark,
+              ),
+            ),
+          ),
+          const SizedBox(height: 30),
+
+          if (_fieldErrors != null && _fieldErrors!.containsKey('general'))
+            Container(
+              padding: const EdgeInsets.all(12),
+              margin: const EdgeInsets.only(bottom: 16),
+              decoration: BoxDecoration(
+                color: AppColors.error.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppColors.error.withOpacity(0.3)),
+              ),
+              child: Row(
                 children: [
-                  Center(
-                    child: Container(
-                      width: 250,
-                      height: 150,
-                      child: Image.asset(
-                        'assets/icons/logo.png',
-                        width: 250,
-                        height: 150,
-                        fit: BoxFit.contain,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            width: 60,
-                            height: 60,
-                            decoration: BoxDecoration(
-                              color: AppColors.primary,
-                              shape: BoxShape.circle,
-                            ),
-                            child: Center(
-                              child: Text(
-                                'CD',
-                                style: const TextStyle(
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-
-                  Center(
+                  Icon(Icons.error_outline, color: AppColors.error, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
                     child: Text(
-                      localizations.registerButton,
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textDark,
-                      ),
+                      _fieldErrors!['general'][0],
+                      style: const TextStyle(color: AppColors.error),
                     ),
                   ),
-                  const SizedBox(height: 30),
-
-                  if (_fieldErrors != null && _fieldErrors!.containsKey('general'))
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      margin: const EdgeInsets.only(bottom: 16),
-                      decoration: BoxDecoration(
-                        color: AppColors.error.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: AppColors.error.withOpacity(0.3)),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.error_outline, color: AppColors.error, size: 20),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              _fieldErrors!['general'][0],
-                              style: const TextStyle(color: AppColors.error),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                  Text(
-                    localizations.company,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textDark,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ChoiceChip(
-                          label: const Text('Commerçant'),
-                          selected: _userType == 'commercant',
-                          onSelected: (selected) {
-                            setState(() {
-                              _userType = 'commercant';
-                            });
-                          },
-                          selectedColor: AppColors.primary,
-                          labelStyle: TextStyle(
-                            color: _userType == 'commercant' ? Colors.white : AppColors.textDark,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: ChoiceChip(
-                          label: const Text('Fournisseur'),
-                          selected: _userType == 'fournisseur',
-                          onSelected: (selected) {
-                            setState(() {
-                              _userType = 'fournisseur';
-                            });
-                          },
-                          selectedColor: AppColors.primary,
-                          labelStyle: TextStyle(
-                            color: _userType == 'fournisseur' ? Colors.white : AppColors.textDark,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-
-                  Text(
-                    localizations.fullName,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textDark,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  TextFormField(
-                    controller: _nameController,
-                    textDirection: languageService.isArabic ? TextDirection.rtl : TextDirection.ltr,
-                    decoration: InputDecoration(
-                      hintText: localizations.fullName,
-                      prefixIcon: Icon(Icons.person_outline, color: AppColors.primary),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return localizations.emailRequired;
-                      }
-                      return null;
-                    },
-                  ),
-                  if (_fieldErrors?.containsKey('name') ?? false)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4, left: 12),
-                      child: Text(
-                        _fieldErrors!['name'][0],
-                        style: const TextStyle(
-                          color: AppColors.error,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ),
-                  const SizedBox(height: 16),
-
-                  Text(
-                    localizations.email,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textDark,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  TextFormField(
-                    controller: _emailController,
-                    keyboardType: TextInputType.emailAddress,
-                    textDirection: languageService.isArabic ? TextDirection.rtl : TextDirection.ltr,
-                    decoration: InputDecoration(
-                      hintText: localizations.emailHint,
-                      prefixIcon: Icon(Icons.email_outlined, color: AppColors.primary),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return localizations.emailRequired;
-                      }
-                      if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
-                        return localizations.invalidEmail;
-                      }
-                      return null;
-                    },
-                  ),
-                  if (_fieldErrors?.containsKey('email') ?? false)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4, left: 12),
-                      child: Text(
-                        _fieldErrors!['email'][0],
-                        style: const TextStyle(
-                          color: AppColors.error,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ),
-                  const SizedBox(height: 16),
-
-                  Text(
-                    localizations.phone,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textDark,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  TextFormField(
-                    controller: _phoneController,
-                    keyboardType: TextInputType.phone,
-                    textDirection: languageService.isArabic ? TextDirection.rtl : TextDirection.ltr,
-                    decoration: InputDecoration(
-                      hintText: localizations.phone,
-                      prefixIcon: Icon(Icons.phone_outlined, color: AppColors.primary),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return localizations.emailRequired;
-                      }
-                      return null;
-                    },
-                  ),
-                  if (_fieldErrors?.containsKey('phone') ?? false)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4, left: 12),
-                      child: Text(
-                        _fieldErrors!['phone'][0],
-                        style: const TextStyle(
-                          color: AppColors.error,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ),
-                  const SizedBox(height: 16),
-
-                  Text(
-                    localizations.companyName,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textDark,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  TextFormField(
-                    controller: _companyController,
-                    textDirection: languageService.isArabic ? TextDirection.rtl : TextDirection.ltr,
-                    decoration: InputDecoration(
-                      hintText: localizations.companyName,
-                      prefixIcon: Icon(Icons.business_outlined, color: AppColors.primary),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return localizations.emailRequired;
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-
-                  if (_userType == 'commercant') ...[
-                    const Text(
-                      'SIRET *',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textDark,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    TextFormField(
-                      controller: _siretController,
-                      keyboardType: TextInputType.number,
-                      maxLength: 14,
-                      textDirection: languageService.isArabic ? TextDirection.rtl : TextDirection.ltr,
-                      decoration: InputDecoration(
-                        hintText: '14 chiffres',
-                        prefixIcon: Icon(Icons.badge_outlined, color: AppColors.primary),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      validator: (value) {
-                        if (_userType == 'commercant' && (value == null || value.isEmpty)) {
-                          return localizations.emailRequired;
-                        }
-                        if (value != null && value.isNotEmpty && value.length != 14) {
-                          return localizations.invalidEmail;
-                        }
-                        return null;
-                      },
-                    ),
-                    if (_fieldErrors?.containsKey('siret') ?? false)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 4, left: 12),
-                        child: Text(
-                          _fieldErrors!['siret'][0],
-                          style: const TextStyle(
-                            color: AppColors.error,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ),
-                    const SizedBox(height: 16),
-                  ],
-
-                  Text(
-                    localizations.password,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textDark,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  TextFormField(
-                    controller: _passwordController,
-                    obscureText: _obscurePassword,
-                    textDirection: languageService.isArabic ? TextDirection.rtl : TextDirection.ltr,
-                    decoration: InputDecoration(
-                      hintText: localizations.passwordHint,
-                      prefixIcon: Icon(Icons.lock_outline, color: AppColors.primary),
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                          color: Colors.grey.shade600,
-                        ),
-                        onPressed: () {
-                          setState(() {
-                            _obscurePassword = !_obscurePassword;
-                          });
-                        },
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return localizations.passwordRequired;
-                      }
-                      if (value.length < 8) {
-                        return localizations.passwordRequired;
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-
-                  Text(
-                    localizations.confirm,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textDark,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  TextFormField(
-                    controller: _confirmPasswordController,
-                    obscureText: _obscureConfirmPassword,
-                    textDirection: languageService.isArabic ? TextDirection.rtl : TextDirection.ltr,
-                    decoration: InputDecoration(
-                      hintText: localizations.confirm,
-                      prefixIcon: Icon(Icons.lock_outline, color: AppColors.primary),
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _obscureConfirmPassword ? Icons.visibility_off : Icons.visibility,
-                          color: Colors.grey.shade600,
-                        ),
-                        onPressed: () {
-                          setState(() {
-                            _obscureConfirmPassword = !_obscureConfirmPassword;
-                          });
-                        },
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return localizations.passwordRequired;
-                      }
-                      if (value != _passwordController.text) {
-                        return localizations.passwordRequired;
-                      }
-                      return null;
-                    },
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  Row(
-                    children: [
-                      Checkbox(
-                        value: _acceptTerms,
-                        onChanged: (value) {
-                          setState(() {
-                            _acceptTerms = value ?? false;
-                          });
-                        },
-                        activeColor: AppColors.primary,
-                      ),
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              _acceptTerms = !_acceptTerms;
-                            });
-                          },
-                          child: Text(
-                            localizations.confirm,
-                            style: TextStyle(
-                              color: Colors.grey.shade700,
-                              decoration: TextDecoration.underline,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  CustomButton(
-                    text: localizations.registerButton,
-                    onPressed: _handleRegister,
-                    isLoading: authService.isLoading,
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  Center(
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          localizations.or,
-                          style: TextStyle(color: Colors.grey.shade600),
-                        ),
-                        GestureDetector(
-                          onTap: () => Navigator.pop(context),
-                          child: Text(
-                            localizations.loginButton,
-                            style: TextStyle(
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 20),
                 ],
               ),
+            ),
+
+          Text(
+            localizations.company,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textDark,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: ChoiceChip(
+                  label: const Text('Commerçant'),
+                  selected: _userType == 'commercant',
+                  onSelected: (selected) {
+                    setState(() {
+                      _userType = 'commercant';
+                    });
+                  },
+                  selectedColor: AppColors.primary,
+                  labelStyle: TextStyle(
+                    color: _userType == 'commercant' ? Colors.white : AppColors.textDark,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ChoiceChip(
+                  label: const Text('Fournisseur'),
+                  selected: _userType == 'fournisseur',
+                  onSelected: (selected) {
+                    setState(() {
+                      _userType = 'fournisseur';
+                    });
+                  },
+                  selectedColor: AppColors.primary,
+                  labelStyle: TextStyle(
+                    color: _userType == 'fournisseur' ? Colors.white : AppColors.textDark,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+
+          _buildLabel(localizations.fullName),
+          const SizedBox(height: 8),
+          TextFormField(
+            controller: _nameController,
+            textDirection: languageService.isArabic ? TextDirection.rtl : TextDirection.ltr,
+            decoration: InputDecoration(
+              hintText: localizations.fullName,
+              prefixIcon: Icon(Icons.person_outline, color: AppColors.primary),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return localizations.emailRequired;
+              }
+              return null;
+            },
+          ),
+          if (_fieldErrors?.containsKey('name') ?? false)
+            _buildErrorText(_fieldErrors!['name'][0]),
+          const SizedBox(height: 16),
+
+          _buildLabel(localizations.email),
+          const SizedBox(height: 8),
+          TextFormField(
+            controller: _emailController,
+            keyboardType: TextInputType.emailAddress,
+            textDirection: languageService.isArabic ? TextDirection.rtl : TextDirection.ltr,
+            decoration: InputDecoration(
+              hintText: localizations.emailHint,
+              prefixIcon: Icon(Icons.email_outlined, color: AppColors.primary),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return localizations.emailRequired;
+              }
+              if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                return localizations.invalidEmail;
+              }
+              return null;
+            },
+          ),
+          if (_fieldErrors?.containsKey('email') ?? false)
+            _buildErrorText(_fieldErrors!['email'][0]),
+          const SizedBox(height: 16),
+
+          _buildLabel(localizations.phone),
+          const SizedBox(height: 8),
+          TextFormField(
+            controller: _phoneController,
+            keyboardType: TextInputType.phone,
+            textDirection: languageService.isArabic ? TextDirection.rtl : TextDirection.ltr,
+            decoration: InputDecoration(
+              hintText: localizations.phone,
+              prefixIcon: Icon(Icons.phone_outlined, color: AppColors.primary),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return localizations.emailRequired;
+              }
+              return null;
+            },
+          ),
+          if (_fieldErrors?.containsKey('phone') ?? false)
+            _buildErrorText(_fieldErrors!['phone'][0]),
+          const SizedBox(height: 16),
+
+          _buildLabel(localizations.companyName),
+          const SizedBox(height: 8),
+          TextFormField(
+            controller: _companyController,
+            textDirection: languageService.isArabic ? TextDirection.rtl : TextDirection.ltr,
+            decoration: InputDecoration(
+              hintText: localizations.companyName,
+              prefixIcon: Icon(Icons.business_outlined, color: AppColors.primary),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return localizations.emailRequired;
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 16),
+
+          if (_userType == 'commercant') ...[
+            _buildLabel('SIRET *'),
+            const SizedBox(height: 8),
+            TextFormField(
+              controller: _siretController,
+              keyboardType: TextInputType.number,
+              maxLength: 14,
+              textDirection: languageService.isArabic ? TextDirection.rtl : TextDirection.ltr,
+              decoration: InputDecoration(
+                hintText: '14 chiffres',
+                prefixIcon: Icon(Icons.badge_outlined, color: AppColors.primary),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                counterText: '',
+              ),
+              validator: (value) {
+                if (_userType == 'commercant' && (value == null || value.isEmpty)) {
+                  return localizations.emailRequired;
+                }
+                if (value != null && value.isNotEmpty && value.length != 14) {
+                  return localizations.invalidEmail;
+                }
+                return null;
+              },
+            ),
+            if (_fieldErrors?.containsKey('siret') ?? false)
+              _buildErrorText(_fieldErrors!['siret'][0]),
+            const SizedBox(height: 16),
+          ],
+
+          _buildLabel(localizations.password),
+          const SizedBox(height: 8),
+          TextFormField(
+            controller: _passwordController,
+            obscureText: _obscurePassword,
+            textDirection: languageService.isArabic ? TextDirection.rtl : TextDirection.ltr,
+            decoration: InputDecoration(
+              hintText: localizations.passwordHint,
+              prefixIcon: Icon(Icons.lock_outline, color: AppColors.primary),
+              suffixIcon: IconButton(
+                icon: Icon(
+                  _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                  color: Colors.grey.shade600,
+                ),
+                onPressed: () {
+                  setState(() {
+                    _obscurePassword = !_obscurePassword;
+                  });
+                },
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return localizations.passwordRequired;
+              }
+              if (value.length < 8) {
+                return 'Minimum 8 caractères';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 16),
+
+          _buildLabel(localizations.confirm),
+          const SizedBox(height: 8),
+          TextFormField(
+            controller: _confirmPasswordController,
+            obscureText: _obscureConfirmPassword,
+            textDirection: languageService.isArabic ? TextDirection.rtl : TextDirection.ltr,
+            decoration: InputDecoration(
+              hintText: localizations.confirm,
+              prefixIcon: Icon(Icons.lock_outline, color: AppColors.primary),
+              suffixIcon: IconButton(
+                icon: Icon(
+                  _obscureConfirmPassword ? Icons.visibility_off : Icons.visibility,
+                  color: Colors.grey.shade600,
+                ),
+                onPressed: () {
+                  setState(() {
+                    _obscureConfirmPassword = !_obscureConfirmPassword;
+                  });
+                },
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return localizations.passwordRequired;
+              }
+              if (value != _passwordController.text) {
+                return 'Les mots de passe ne correspondent pas';
+              }
+              return null;
+            },
+          ),
+
+          const SizedBox(height: 24),
+
+          Row(
+            children: [
+              Checkbox(
+                value: _acceptTerms,
+                onChanged: (value) {
+                  setState(() {
+                    _acceptTerms = value ?? false;
+                  });
+                },
+                activeColor: AppColors.primary,
+              ),
+              Expanded(
+                child: GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _acceptTerms = !_acceptTerms;
+                    });
+                  },
+                  child: Text(
+                    "J'accepte les conditions d'utilisation",
+                    style: TextStyle(
+                      color: Colors.grey.shade700,
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 24),
+
+          CustomButton(
+            text: 'Continuer',
+            onPressed: _sendVerificationCode,
+            isLoading: authService.isLoading,
+          ),
+
+          const SizedBox(height: 20),
+
+          Center(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  'Déjà un compte ? ',
+                  style: TextStyle(color: Colors.grey.shade600),
+                ),
+                GestureDetector(
+                  onTap: () => Navigator.pop(context),
+                  child: Text(
+                    'Se connecter',
+                    style: TextStyle(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 20),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildVerificationSection(BuildContext context) {
+    return Column(
+      children: [
+        const SizedBox(height: 20),
+        Container(
+          width: 100,
+          height: 100,
+          decoration: BoxDecoration(
+            color: AppColors.primary.withOpacity(0.1),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(
+            Icons.mark_email_read,
+            size: 50,
+            color: AppColors.primary,
+          ),
+        ),
+        const SizedBox(height: 24),
+        Text(
+          'Vérifiez votre email',
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: AppColors.textDark,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          'Nous avons envoyé un code à 6 chiffres à',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: Colors.grey.shade600, fontSize: 16),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          _currentEmail ?? '',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+            color: AppColors.primary,
+          ),
+        ),
+        const SizedBox(height: 32),
+
+        // Champs de code
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: List.generate(6, (index) {
+            return SizedBox(
+              width: 45,
+              height: 55,
+              child: TextFormField(
+                controller: _codeControllers[index],
+                focusNode: _codeFocusNodes[index],
+                textAlign: TextAlign.center,
+                keyboardType: TextInputType.number,
+                maxLength: 1,
+                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                decoration: InputDecoration(
+                  counterText: '',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: AppColors.primary, width: 2),
+                  ),
+                ),
+                onChanged: (value) => _onCodeChanged(index, value),
+              ),
             );
-          },
+          }),
+        ),
+        const SizedBox(height: 24),
+
+        CustomButton(
+          text: 'Vérifier',
+          onPressed: _verifyCode,
+          isLoading: Provider.of<AuthService>(context).isLoading,
+        ),
+        const SizedBox(height: 16),
+
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              'Code non reçu ? ',
+              style: TextStyle(color: Colors.grey.shade600),
+            ),
+            GestureDetector(
+              onTap: _canResend ? _resendCode : null,
+              child: Text(
+                _canResend ? 'Renvoyer' : 'Renvoyer dans $_resendSeconds s',
+                style: TextStyle(
+                  color: _canResend ? AppColors.primary : Colors.grey.shade400,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLabel(String text) {
+    return Text(
+      text,
+      style: const TextStyle(
+        fontSize: 14,
+        fontWeight: FontWeight.w600,
+        color: AppColors.textDark,
+      ),
+    );
+  }
+
+  Widget _buildErrorText(String error) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 4, left: 12),
+      child: Text(
+        error,
+        style: const TextStyle(
+          color: AppColors.error,
+          fontSize: 12,
         ),
       ),
     );
