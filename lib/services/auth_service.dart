@@ -124,65 +124,8 @@ class AuthService extends ChangeNotifier {
     }
   }
 
-  Future<Map<String, dynamic>> register(Map<String, dynamic> userData) async {
-    _setLoading(true);
-    _clearError();
 
-    try {
-      String? sessionId;
-      final prefs = await SharedPreferences.getInstance();
-      sessionId = prefs.getString('cart_session_id');
-
-      final Map<String, String> headers = {'Content-Type': 'application/json'};
-      if (sessionId != null) {
-        headers['X-Session-ID'] = sessionId;
-      }
-
-      String endpoint;
-      if (userData['user_type'] == 'fournisseur') {
-        endpoint = '${AppConstants.baseUrl}/auth/register/fournisseur';
-      } else {
-        endpoint = '${AppConstants.baseUrl}/auth/register/commercant';
-      }
-
-      final response = await http.post(
-        Uri.parse(endpoint),
-        headers: headers,
-        body: json.encode(userData),
-      );
-
-      final data = json.decode(response.body);
-
-      if (response.statusCode == 201 && data['success']) {
-        await _saveAuthData(data['data']);
-
-        if (_cartService != null) {
-          if (data['data']['cart']?['session_id'] != null) {
-            await prefs.setString('cart_session_id', data['data']['cart']['session_id']);
-          }
-          await _cartService!.loadCart();
-        }
-
-        _setLoading(false);
-        return {'success': true};
-      } else {
-        _setLoading(false);
-        return {
-          'success': false,
-          'errors': data['errors'] ?? {'general': [data['message'] ?? 'Erreur']}
-        };
-      }
-    } catch (e) {
-      _setLoading(false);
-      return {
-        'success': false,
-        'errors': {'general': ['Erreur réseau: ${e.toString()}']}
-      };
-    }
-  }
-
-
-  // ÉTAPE 1 : Envoyer le code de vérification
+// ÉTAPE 1 : Envoyer le code de vérification
   Future<Map<String, dynamic>> sendVerificationCode(Map<String, dynamic> userData) async {
     _setLoading(true);
     _clearError();
@@ -197,11 +140,26 @@ class AuthService extends ChangeNotifier {
         headers['X-Session-ID'] = sessionId;
       }
 
+      print('📤 Envoi des données: ${json.encode(userData)}'); // LOG IMPORTANT
+
       final response = await http.post(
         Uri.parse('${AppConstants.baseUrl}/auth/send-verification-code'),
         headers: headers,
         body: json.encode(userData),
       );
+
+      print('📥 Statut: ${response.statusCode}');
+      print('📥 Réponse: ${response.body}');
+
+      // Vérifier si la réponse est du HTML (erreur 500)
+      if (response.body.trim().startsWith('<!DOCTYPE')) {
+        print('❌ Erreur HTML reçue');
+        _setLoading(false);
+        return {
+          'success': false,
+          'message': 'Erreur serveur. Vérifiez les logs.',
+        };
+      }
 
       final data = json.decode(response.body);
 
@@ -214,20 +172,34 @@ class AuthService extends ChangeNotifier {
         };
       } else {
         _setLoading(false);
+
+        // Message d'erreur plus précis
+        String errorMessage = data['message'] ?? 'Erreur lors de l\'envoi';
+        if (data['errors'] != null) {
+          final errors = data['errors'] as Map;
+          if (errors['general'] != null) {
+            errorMessage = errors['general'][0];
+          } else {
+            final firstKey = errors.keys.first;
+            errorMessage = errors[firstKey][0];
+          }
+        }
+
         return {
           'success': false,
-          'errors': data['errors'] ?? {'general': [data['message'] ?? 'Erreur']}
+          'message': errorMessage,
+          'errors': data['errors'],
         };
       }
     } catch (e) {
+      print('❌ Exception: $e');
       _setLoading(false);
       return {
         'success': false,
-        'errors': {'general': ['Erreur réseau: ${e.toString()}']}
+        'message': 'Erreur réseau: ${e.toString()}',
       };
     }
   }
-
   // ÉTAPE 2 : Vérifier le code et finaliser l'inscription
   Future<Map<String, dynamic>> verifyCodeAndRegister(String email, String code) async {
     _setLoading(true);
@@ -365,7 +337,7 @@ class AuthService extends ChangeNotifier {
       if (response.statusCode == 200 && data['success']) {
         return {
           'success': true,
-          'token': data['data']['token'],
+          'code': code,
         };
       } else {
         return {

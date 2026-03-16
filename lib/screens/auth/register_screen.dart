@@ -120,11 +120,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
         'password': _passwordController.text,
         'password_confirmation': _confirmPasswordController.text,
         'user_type': _userType,
-        'siret': _siretController.text.trim(),
         'phone': _phoneController.text.trim(),
         'company_name': _companyController.text.trim(),
         'accept_terms': true,
       };
+
+      // ✅ Ajouter siret UNIQUEMENT pour commerçant
+      if (_userType == 'commercant') {
+        userData['siret'] = _siretController.text.trim();
+      }
+
 
       final authService = Provider.of<AuthService>(context, listen: false);
       final result = await authService.sendVerificationCode(userData);
@@ -168,22 +173,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final result = await authService.verifyCodeAndRegister(_currentEmail!, code);
 
     if (result['success'] && mounted) {
+      // ✅ Message de succès
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Inscription réussie !'),
+          content: Text('Inscription réussie ! Vous pouvez maintenant vous connecter.'),
           backgroundColor: AppColors.success,
-          duration: const Duration(seconds: 2),
+          duration: const Duration(seconds: 3),
         ),
       );
 
-      // Rediriger vers le dashboard approprié
+      // ✅ Rediriger vers la page de connexion au lieu du dashboard
       await Future.delayed(const Duration(seconds: 1));
 
-      final user = authService.currentUser;
-      if (user?.userType == 'commercant') {
-        Navigator.pushReplacementNamed(context, '/merchant/dashboard');
-      } else {
-        Navigator.pushReplacementNamed(context, '/supplier/dashboard');
+      if (mounted) {
+        // Revenir à la page de connexion
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => const LoginScreen()),
+              (route) => false, // Supprime toutes les routes précédentes
+        );
       }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
