@@ -165,7 +165,7 @@ class _CartScreenState extends State<CartScreen> {
                 Navigator.pushReplacementNamed(context, '/merchant/dashboard');
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
+                backgroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(25),

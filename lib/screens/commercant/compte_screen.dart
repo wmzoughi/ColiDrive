@@ -7,6 +7,7 @@ import '../../utils/constants.dart';
 import '../../l10n/app_localizations.dart';
 import '../../widgets/bottom_nav_bar.dart';
 import '../auth/login_screen.dart';
+import '../../widgets/notification_icon.dart';
 
 class CompteScreenM extends StatelessWidget {
   const CompteScreenM({Key? key}) : super(key: key);
@@ -34,7 +35,11 @@ class CompteScreenM extends StatelessWidget {
           icon: Icon(Icons.arrow_back, color: AppColors.textDark),
           onPressed: () => Navigator.pop(context),
         ),
+        actions: [
+          NotificationIcon(color: const Color(0xFF2D3A4F)), // 👈 AJOUTEZ ICI
+        ],
       ),
+
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(

@@ -4,9 +4,12 @@ import 'package:provider/provider.dart';
 import '../../models/product.dart';
 import '../../services/cart_service.dart';
 import '../../services/auth_service.dart';
+import '../../services/review_service.dart';
 import '../../utils/constants.dart';
 import '../../widgets/product_image.dart';
+import '../../widgets/rating_stars.dart';
 import '../../l10n/app_localizations.dart';
+import '../../widgets/notification_icon.dart';
 
 class ProductDetailScreen extends StatefulWidget {
   final Product product;
@@ -55,6 +58,14 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     }
   }
 
+  // 👇 Fonction pour obtenir la note du fournisseur
+  Future<double> _getSupplierRating(int? supplierId) async {
+    if (supplierId == null) return 0;
+    final reviewService = Provider.of<ReviewService>(context, listen: false);
+    await reviewService.getSupplierReviews(supplierId);
+    return reviewService.supplierReviews?.supplier.averageRating ?? 0;
+  }
+
   @override
   Widget build(BuildContext context) {
     final localizations = AppLocalizations.of(context)!;
@@ -87,6 +98,19 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             ),
           ),
           actions: [
+            NotificationIcon(color: const Color(0xFF2D3A4F)),
+            // 👇 BOUTON POUR VOIR LES AVIS
+            if (product.supplierId != null)
+              IconButton(
+                icon: const Icon(Icons.star_outline, color: Color(0xFF2D3A4F)),
+                onPressed: () {
+                  Navigator.pushNamed(
+                    context,
+                    '/merchant/product-reviews',
+                    arguments: {'product': product},
+                  );
+                },
+              ),
             Stack(
               children: [
                 IconButton(
@@ -244,6 +268,104 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         ],
                       ),
                     ),
+
+                    const SizedBox(height: 16),
+
+                    // 👇 NOUVEAU: SECTION AVIS DU FOURNISSEUR
+                    // 👇 NOUVEAU: SECTION AVIS DU FOURNISSEUR
+                    if (product.supplierId != null)
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.pushNamed(
+                            context,
+                            '/merchant/product-reviews',
+                            arguments: {'product': product},
+                          );
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.amber.shade50,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.amber.shade200),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: Colors.amber.shade100,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  Icons.star,
+                                  color: Colors.amber.shade700,
+                                  size: 24,
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Avis sur le fournisseur',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                        color: Colors.amber.shade800,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    FutureBuilder<double>(
+                                      future: _getSupplierRating(product.supplierId),
+                                      builder: (context, snapshot) {
+                                        if (snapshot.connectionState == ConnectionState.waiting) {
+                                          return Text(  // 👈 Enlever const
+                                            'Chargement des avis...',
+                                            style: TextStyle(fontSize: 12),
+                                          );
+                                        }
+                                        if (snapshot.hasData && snapshot.data! > 0) {
+                                          return Row(
+                                            children: [
+                                              RatingStars(
+                                                rating: snapshot.data!,
+                                                size: 16,
+                                                showNumber: true,
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Text(  // 👈 Enlever const
+                                                'Voir tous les avis',
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: Colors.grey[600],
+                                                ),
+                                              ),
+                                            ],
+                                          );
+                                        }
+                                        return Text(  // 👈 Enlever const
+                                          'Soyez le premier à donner votre avis',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.grey[600],
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Icon(
+                                Icons.arrow_forward_ios,
+                                size: 16,
+                                color: Colors.amber.shade700,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
 
                     const SizedBox(height: 16),
 

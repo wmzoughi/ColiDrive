@@ -10,6 +10,7 @@ import '../../widgets/bottom_nav_bar.dart';
 import '../../l10n/app_localizations.dart';
 import 'gestion_produits.dart';
 import 'compte_screen.dart';
+import '../../widgets/notification_icon.dart';
 
 class DashboardFournisseur extends StatefulWidget {
   const DashboardFournisseur({Key? key}) : super(key: key);
@@ -79,11 +80,13 @@ class _DashboardFournisseurState extends State<DashboardFournisseur> {
             ],
           ),
           actions: [
+            NotificationIcon(color: const Color(0xFF2D3A4F)), // 👈 AJOUTEZ ICI
             IconButton(
-              icon: const Icon(Icons.notifications_none, color: Color(0xFF2D3A4F)),
-              onPressed: () {},
+              icon: const Icon(Icons.refresh, color: Color(0xFF2D3A4F)),
+              onPressed: _loadData,
             ),
           ],
+
         ),
         body: dashboardService.isLoading
             ? const Center(child: CircularProgressIndicator())

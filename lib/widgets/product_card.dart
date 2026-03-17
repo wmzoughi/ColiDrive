@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/product.dart';
 import '../services/cart_service.dart';
+import '../services/review_service.dart';
 import '../utils/constants.dart';
 import 'product_image.dart';
+import 'rating_stars.dart';
 import '../l10n/app_localizations.dart';
 
 class ProductCard extends StatelessWidget {
@@ -34,7 +36,7 @@ class ProductCard extends StatelessWidget {
       onTap: onTap,
       child: Container(
         width: width ?? 160,
-        height: height ?? 260,
+        height: height ?? 280,
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
@@ -141,6 +143,34 @@ class ProductCard extends StatelessWidget {
                     ),
                   const SizedBox(height: 4),
 
+                  // ✅ AJOUT : Note moyenne du fournisseur
+                  FutureBuilder<double>(
+                    future: _getSupplierRating(context, product.supplierId),
+                    builder: (context, snapshot) {
+                      if (snapshot.hasData && snapshot.data! > 0) {
+                        return Row(
+                          children: [
+                            RatingStars(
+                              rating: snapshot.data!,
+                              size: 10,
+                              showNumber: true,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '(${snapshot.data!.toStringAsFixed(1)})',
+                              style: TextStyle(
+                                fontSize: 9,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                          ],
+                        );
+                      }
+                      return const SizedBox(height: 14); // Espace réservé
+                    },
+                  ),
+                  const SizedBox(height: 4),
+
                   // Conditionnement
                   if (product.packaging != null)
                     Row(
@@ -207,10 +237,8 @@ class ProductCard extends StatelessWidget {
                           child: ElevatedButton(
                             onPressed: () async {
                               if (isInCart) {
-                                // Aller au panier
                                 Navigator.pushNamed(context, '/merchant/cart');
                               } else {
-                                // Ajouter au panier
                                 bool success = await cartService.addToCart(
                                   product,
                                   quantity: 1,
@@ -263,6 +291,13 @@ class ProductCard extends StatelessWidget {
     );
   }
 
+  Future<double> _getSupplierRating(BuildContext context, int? supplierId) async {
+    if (supplierId == null) return 0;
+    final reviewService = Provider.of<ReviewService>(context, listen: false);
+    await reviewService.getSupplierReviews(supplierId);
+    return reviewService.supplierReviews?.supplier.averageRating ?? 0;
+  }
+
   // Badge de stock
   Widget _buildStockBadge() {
     if (product.stockQuantity == null) return const SizedBox();
@@ -277,7 +312,7 @@ class ProductCard extends StatelessWidget {
       badgeColor = Colors.orange;
       badgeText = 'Stock faible';
     } else {
-      return const SizedBox(); // Pas de badge si stock suffisant
+      return const SizedBox();
     }
 
     return Container(
@@ -292,114 +327,6 @@ class ProductCard extends StatelessWidget {
           color: Colors.white,
           fontSize: 8,
           fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
-}
-
-// Version compacte pour les listes horizontales
-class CompactProductCard extends StatelessWidget {
-  final Product product;
-  final VoidCallback? onTap;
-
-  const CompactProductCard({
-    Key? key,
-    required this.product,
-    this.onTap,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    final localizations = AppLocalizations.of(context)!;
-
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 120,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(8),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.1),
-              blurRadius: 4,
-              offset: const Offset(0, 1),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Image
-            ClipRRect(
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(8),
-              ),
-              child: ProductImage(
-                productId: product.id,
-                imageUrl: product.imageUrl,
-                width: double.infinity,
-                height: 80,
-                fit: BoxFit.cover,
-              ),
-            ),
-
-            // Infos
-            Padding(
-              padding: const EdgeInsets.all(8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    product.name,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 2),
-                  if (product.packaging != null)
-                    Text(
-                      product.packaging!,
-                      style: TextStyle(
-                        fontSize: 9,
-                        color: Colors.grey.shade600,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      if (product.isInPromotion)
-                        Padding(
-                          padding: const EdgeInsets.only(right: 4),
-                          child: Text(
-                            '${product.listPrice.toStringAsFixed(2)}',
-                            style: const TextStyle(
-                              decoration: TextDecoration.lineThrough,
-                              color: Colors.grey,
-                              fontSize: 8,
-                            ),
-                          ),
-                        ),
-                      Text(
-                        '${product.currentPrice.toStringAsFixed(2)} ${localizations.currency}',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: product.isInPromotion ? Colors.red : AppColors.primary,
-                          fontSize: 11,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
         ),
       ),
     );

@@ -11,6 +11,7 @@ import '../../models/order.dart';
 import '../../widgets/product_image.dart';
 import '../../widgets/cart_icon_with_badge.dart';
 import '../../services/cart_service.dart';
+import '../../widgets/notification_icon.dart';
 
 class DashboardCommercant extends StatefulWidget {
   const DashboardCommercant({Key? key}) : super(key: key);
@@ -81,13 +82,13 @@ class _DashboardCommercantState extends State<DashboardCommercant> {
             children: [
               Image.asset(
                 'assets/icons/logo.png',
-                width: 40,
-                height: 40,
+                width: 150,
+                height: 150,
                 fit: BoxFit.contain,
                 errorBuilder: (context, error, stackTrace) {
                   return Container(
-                    width: 40,
-                    height: 40,
+                    width: 150,
+                    height: 150,
                     decoration: BoxDecoration(
                       color: AppColors.primary,
                       shape: BoxShape.circle,
@@ -106,35 +107,11 @@ class _DashboardCommercantState extends State<DashboardCommercant> {
                 },
               ),
               const SizedBox(width: 8),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'ColiDrive',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF2D3A4F),
-                    ),
-                  ),
-                  Text(
-                    'Marketplace',
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: Colors.grey.shade600,
-                    ),
-                  ),
-                ],
-              ),
+
             ],
           ),
           actions: [
-            IconButton(
-              icon: const Icon(Icons.notifications_none, color: Color(0xFF2D3A4F)),
-              onPressed: () {
-                // Notification screen
-              },
-            ),
+            NotificationIcon(color: const Color(0xFF2D3A4F)), // 👈 AJOUTEZ ICI
             IconButton(
               icon: CartIconWithBadge(),
               onPressed: () => Navigator.pushNamed(context, '/merchant/cart'),
@@ -676,7 +653,16 @@ class _DashboardCommercantState extends State<DashboardCommercant> {
     final localizations = AppLocalizations.of(context)!;
     final cartService = Provider.of<CartService>(context, listen: false);
 
-    return Container(
+    return GestureDetector(
+        onTap: () {
+          // ✅ Navigation vers le détail du produit
+          Navigator.pushNamed(
+            context,
+            '/merchant/product-detail',
+            arguments: {'product': product},
+          );
+        },
+        child: Container(
       width: 150,
       decoration: BoxDecoration(
         color: Colors.white,
@@ -797,6 +783,7 @@ class _DashboardCommercantState extends State<DashboardCommercant> {
           ),
         ],
       ),
+        ),
     );
   }
 

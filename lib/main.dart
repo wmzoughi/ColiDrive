@@ -27,16 +27,22 @@ import 'screens/commercant/product_detail_screen.dart';
 import 'screens/commercant/checkout_screen.dart';
 import 'services/order_service.dart';
 import 'screens/fournisseur/SupplierOrdersScreen.dart';
+import 'screens/commercant/product_reviews_screen.dart';
+
 
 // 👇 NOUVEAUX IMPORTS POUR LE FLUX MULTIVENDEUR
 import 'screens/commercant/supplier_products_screen.dart';
 import 'screens/commercant/suppliers_screen.dart';
+import 'screens/notifications_screen.dart';
 
 // Services
 import 'services/dashboard_service.dart';
 import 'services/product_service.dart';
 import 'services/merchant_service.dart';
 import 'services/cart_service.dart';
+import 'services/review_service.dart';
+import 'services/notification_service.dart';
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -52,6 +58,8 @@ void main() async {
   final dashboardService = DashboardService(authService);
   final productService = ProductService(authService);
   final merchantService = MerchantService(authService);
+  final reviewService = ReviewService(authService);
+  final notificationService = NotificationService(authService);
 
   // ✅ Injecter TOUS les services dans authService
   authService.setCartService(cartService);
@@ -71,6 +79,8 @@ void main() async {
         ChangeNotifierProvider(create: (_) => dashboardService),
         ChangeNotifierProvider(create: (_) => productService),
         ChangeNotifierProvider(create: (_) => merchantService),
+        ChangeNotifierProvider(create: (_) => reviewService),
+        ChangeNotifierProvider(create: (_) => notificationService),
       ],
       child: const MyApp(),
     ),
@@ -142,6 +152,7 @@ class MyApp extends StatelessWidget {
         '/merchant/account': (context) => const CompteScreenM(),
         '/merchant/checkout': (context) => const CheckoutScreen(),
 
+
         // 👇 NOUVELLES ROUTES POUR LE FLUX MULTIVENDEUR
         '/merchant/suppliers': (context) => const SuppliersScreen(),
 
@@ -150,6 +161,9 @@ class MyApp extends StatelessWidget {
         '/supplier/products': (context) => const GestionProduitsScreen(),
         '/supplier/account': (context) => const CompteScreenS(),
         '/supplier/orders': (context) => const SupplierOrdersScreen(),
+
+        '/notifications': (context) => const NotificationsScreen(),
+
       },
       onGenerateRoute: (settings) {
         // Route avec paramètres pour les produits d'un fournisseur spécifique
@@ -159,6 +173,15 @@ class MyApp extends StatelessWidget {
             builder: (context) => SupplierProductsScreen(
               supplierId: args['supplier_id'],
               supplierName: args['supplier_name'],
+            ),
+          );
+        }
+
+        if (settings.name == '/merchant/product-reviews') {
+          final args = settings.arguments as Map<String, dynamic>;
+          return MaterialPageRoute(
+            builder: (context) => ProductReviewsScreen(
+              product: args['product'],
             ),
           );
         }

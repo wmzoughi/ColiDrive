@@ -14,6 +14,7 @@ import '../../l10n/app_localizations.dart';
 import 'compte_screen.dart';
 import 'product_detail_screen.dart';
 import '../../widgets/cart_icon_with_badge.dart';
+import '../../widgets/notification_icon.dart';
 
 class ProductsScreen extends StatefulWidget {
   const ProductsScreen({Key? key}) : super(key: key);
@@ -181,13 +182,13 @@ class _ProductsScreenState extends State<ProductsScreen> {
           children: [
             Image.asset(
               'assets/icons/logo.png',
-              width: 40,
-              height: 40,
+              width: 150,
+              height: 150,
               fit: BoxFit.contain,
               errorBuilder: (context, error, stackTrace) {
                 return Container(
-                  width: 40,
-                  height: 40,
+                  width: 150,
+                  height: 150,
                   decoration: BoxDecoration(
                     color: AppColors.primary,
                     shape: BoxShape.circle,
@@ -206,18 +207,11 @@ class _ProductsScreenState extends State<ProductsScreen> {
               },
             ),
             const SizedBox(width: 8),
-            Text(
-              'ColiDrive',
-              style: TextStyle(
-                color: Color(0xFF2D3A4F),
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
           ],
         ),
 
         actions: [
+          NotificationIcon(color: const Color(0xFF2D3A4F)),
           IconButton(
             icon: CartIconWithBadge(), // 👈 Utilise le widget personnalisé
             onPressed: () => Navigator.pushNamed(context, '/merchant/cart'),

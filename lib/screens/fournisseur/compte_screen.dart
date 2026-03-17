@@ -10,6 +10,7 @@ import '../../l10n/app_localizations.dart';
 import '../auth/login_screen.dart';
 import 'gestion_produits.dart';
 import '../../models/user.dart';
+import '../../widgets/notification_icon.dart';
 
 class CompteScreenS extends StatelessWidget {
   const CompteScreenS({Key? key}) : super(key: key);
@@ -39,6 +40,7 @@ class CompteScreenS extends StatelessWidget {
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
+          NotificationIcon(color: const Color(0xFF2D3A4F)),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () {

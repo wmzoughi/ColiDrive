@@ -9,6 +9,7 @@ import '../../widgets/product_image.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/order.dart';
 import '../../models/order_item.dart';
+import '../../widgets/notification_icon.dart';
 
 class SupplierOrdersScreen extends StatefulWidget {
   const SupplierOrdersScreen({Key? key}) : super(key: key);
@@ -534,6 +535,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
             ],
           ),
           actions: [
+            NotificationIcon(color: const Color(0xFF2D3A4F)),
             IconButton(
               icon: const Icon(Icons.refresh, color: Color(0xFF2D3A4F)),
               onPressed: () {
@@ -878,12 +880,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
               padding: const EdgeInsets.only(bottom: 8),
               child: Row(
                 children: [
-                  ProductImage(
-                    productId: item.productId,
-                    width: 40,
-                    height: 40,
-                    fit: BoxFit.cover,
-                  ),
+                  _buildProductImage(item),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Column(
@@ -1073,7 +1070,29 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
 
     return buttons;
   }
+// Dans _buildOrderCard, remplacez la partie ProductImage par :
 
+  Widget _buildProductImage(OrderItem item) {
+    // Essayer de récupérer l'URL depuis le snapshot
+    String? imageUrl = item.productSnapshot?['image_url'];
+
+    if (imageUrl != null && imageUrl.isNotEmpty) {
+      return ProductImage(
+        imageUrl: imageUrl,  // ← Utiliser l'URL du snapshot
+        width: 40,
+        height: 40,
+        fit: BoxFit.cover,
+      );
+    } else {
+      // Fallback sur l'ID du produit
+      return ProductImage(
+        productId: item.productId,
+        width: 40,
+        height: 40,
+        fit: BoxFit.cover,
+      );
+    }
+  }
   String _formatDate(DateTime date, AppLocalizations localizations, bool isArabic) {
     final now = DateTime.now();
     final difference = now.difference(date);

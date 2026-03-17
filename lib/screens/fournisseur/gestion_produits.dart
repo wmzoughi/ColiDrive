@@ -108,6 +108,7 @@ class _GestionProduitsScreenState extends State<GestionProduitsScreen> {
             const SizedBox(width: 8),
           ],
         ),
+
       ),
       body: Column(
         children: [

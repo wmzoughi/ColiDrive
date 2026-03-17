@@ -9,6 +9,7 @@ import '../../widgets/product_image.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/order.dart';
 import '../../l10n/app_localizations.dart';
+import '../../widgets/notification_icon.dart';
 
 class OrdersScreen extends StatefulWidget {
   const OrdersScreen({Key? key}) : super(key: key);
@@ -121,6 +122,10 @@ class _OrdersScreenState extends State<OrdersScreen> {
             const SizedBox(width: 8),
           ],
         ),
+        actions: [
+          NotificationIcon(color: const Color(0xFF2D3A4F)), // 👈 AJOUTEZ ICI
+
+        ],
       ),
       body: Column(
         children: [
