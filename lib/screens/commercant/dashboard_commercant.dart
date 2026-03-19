@@ -12,6 +12,7 @@ import '../../widgets/product_image.dart';
 import '../../widgets/cart_icon_with_badge.dart';
 import '../../services/cart_service.dart';
 import '../../widgets/notification_icon.dart';
+import '../../widgets/invoice_badge.dart';
 
 class DashboardCommercant extends StatefulWidget {
   const DashboardCommercant({Key? key}) : super(key: key);
@@ -111,6 +112,7 @@ class _DashboardCommercantState extends State<DashboardCommercant> {
             ],
           ),
           actions: [
+            InvoiceBadge(color: const Color(0xFF2D3A4F)),
             NotificationIcon(color: const Color(0xFF2D3A4F)), // 👈 AJOUTEZ ICI
             IconButton(
               icon: CartIconWithBadge(),

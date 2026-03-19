@@ -28,10 +28,15 @@ dependencies:
   intl: ^0.20.2
   cached_network_image: ^3.3.0
   image_picker: ^1.0.5
+  share_plus: ^7.2.0
   path_provider: ^2.1.1
   url_launcher: ^6.2.1
   permission_handler: ^11.0.1
   flutter_gen: ^5.3.2
+  open_file: ^3.3.2
+
+
+
 
   # PDF
   pdf: ^3.10.7

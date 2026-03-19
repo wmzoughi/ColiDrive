@@ -1,4 +1,5 @@
 // lib/screens/fournisseur/add_edit_product_screen.dart
+
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -32,13 +33,18 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _priceController = TextEditingController();
+
+  // ✅ Gestion améliorée du conditionnement
   final _packagingController = TextEditingController();
+  final _packagingQuantityController = TextEditingController();
+  String _selectedPackagingType = 'unité'; // unité, carton, pack, palette
+
   final _codeController = TextEditingController();
   final _promoPriceController = TextEditingController();
   final _promoStartController = TextEditingController();
   final _promoEndController = TextEditingController();
 
-  // 👇 NOUVEAUX CONTROLEURS POUR LE STOCK
+  // Gestion du stock
   final _stockQuantityController = TextEditingController();
   final _minStockAlertController = TextEditingController();
   final _maxStockAlertController = TextEditingController();
@@ -52,11 +58,20 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
   bool _isAddingCategory = false;
   final TextEditingController _newCategoryController = TextEditingController();
 
+  // Types de conditionnement disponibles
+  final List<Map<String, dynamic>> _packagingTypes = [
+    {'value': 'unité', 'label': 'À l\'unité', 'hint': 'Ex: 1 pièce', 'suffix': 'pièce(s)'},
+    {'value': 'carton', 'label': 'Carton', 'hint': 'Ex: 12 pièces', 'suffix': 'carton(s)'},
+    {'value': 'pack', 'label': 'Pack', 'hint': 'Ex: 4 pièces', 'suffix': 'pack(s)'},
+    {'value': 'palette', 'label': 'Palette', 'hint': 'Ex: 120 pièces', 'suffix': 'palette(s)'},
+    {'value': 'bouteille', 'label': 'Bouteille', 'hint': 'Ex: 1.5L', 'suffix': 'bouteille(s)'},
+    {'value': 'caisse', 'label': 'Caisse', 'hint': 'Ex: 6 bouteilles', 'suffix': 'caisse(s)'},
+  ];
+
   @override
   void initState() {
     super.initState();
 
-    // Forcer le chargement des catégories
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final productService = Provider.of<ProductService>(context, listen: false);
       if (productService.categories.isEmpty) {
@@ -64,18 +79,19 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
       }
     });
 
-    // Initialisation des valeurs
     if (widget.product != null) {
       // Produit existant
       _nameController.text = widget.product!.name;
       _descriptionController.text = widget.product!.description ?? '';
       _priceController.text = widget.product!.listPrice.toString();
-      _packagingController.text = widget.product!.packaging ?? '';
+
+      // ✅ Parser le conditionnement existant
+      _parseExistingPackaging(widget.product!.packaging ?? '');
+
       _codeController.text = widget.product!.defaultCode ?? '';
       _selectedCategoryId = widget.product!.categoryId;
       _isPromotion = widget.product!.isPromotion;
 
-      // 👇 INITIALISATION DES VALEURS DE STOCK
       _stockQuantityController.text = widget.product!.stockQuantity?.toString() ?? '0';
       _minStockAlertController.text = widget.product!.minStockAlert?.toString() ?? '5';
       _maxStockAlertController.text = widget.product!.maxStockAlert?.toString() ?? '100';
@@ -92,11 +108,56 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
         '${widget.product!.promotionEnd!.year}-${widget.product!.promotionEnd!.month.toString().padLeft(2, '0')}-${widget.product!.promotionEnd!.day.toString().padLeft(2, '0')}';
       }
     } else {
-      // Nouveau produit - valeurs par défaut
+      // Nouveau produit
       _stockQuantityController.text = '0';
       _minStockAlertController.text = '5';
       _maxStockAlertController.text = '100';
+      _packagingQuantityController.text = '1';
     }
+  }
+
+  // ✅ Parser le conditionnement existant
+  void _parseExistingPackaging(String packaging) {
+    if (packaging.isEmpty) return;
+
+    // Format attendu: "12 carton(s)" ou "4 pack(s)" ou "1.5L bouteille"
+    final regex = RegExp(r'^([\d.]+)\s*(.+)$');
+    final match = regex.firstMatch(packaging);
+
+    if (match != null) {
+      _packagingQuantityController.text = match.group(1) ?? '1';
+      String type = match.group(2) ?? '';
+
+      // Trouver le type correspondant
+      for (var t in _packagingTypes) {
+        if (type.contains(t['suffix'].replaceAll('(s)', ''))) {
+          _selectedPackagingType = t['value'];
+          _packagingController.text = '';
+          return;
+        }
+      }
+    }
+
+    // Si pas de format reconnu, on met dans le champ libre
+    _packagingController.text = packaging;
+  }
+
+  // ✅ Obtenir le texte complet du conditionnement
+  String _getPackagingText() {
+    if (_packagingController.text.isNotEmpty) {
+      return _packagingController.text;
+    }
+
+    final type = _packagingTypes.firstWhere(
+          (t) => t['value'] == _selectedPackagingType,
+      orElse: () => _packagingTypes.first,
+    );
+
+    final quantity = _packagingQuantityController.text.isEmpty
+        ? '1'
+        : _packagingQuantityController.text;
+
+    return '$quantity ${type['suffix']}';
   }
 
   @override
@@ -105,11 +166,11 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
     _descriptionController.dispose();
     _priceController.dispose();
     _packagingController.dispose();
+    _packagingQuantityController.dispose();
     _codeController.dispose();
     _promoPriceController.dispose();
     _promoStartController.dispose();
     _promoEndController.dispose();
-    // 👇 DISPOSE DES NOUVEAUX CONTROLEURS
     _stockQuantityController.dispose();
     _minStockAlertController.dispose();
     _maxStockAlertController.dispose();
@@ -197,7 +258,6 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
         );
       }
     } else {
-      // Pour la galerie
       bool granted = false;
 
       if (Platform.isAndroid) {
@@ -348,7 +408,6 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
     }
   }
 
-  // 👇 FONCTION POUR OBTENIR LE STATUT DU STOCK
   Map<String, dynamic> _getStockStatus() {
     int stock = int.tryParse(_stockQuantityController.text) ?? 0;
     int minAlert = int.tryParse(_minStockAlertController.text) ?? 5;
@@ -384,7 +443,6 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
 
     setState(() => _isLoading = true);
 
-    // Récupérer les valeurs de stock
     int stockQuantity = int.tryParse(_stockQuantityController.text) ?? 0;
     int minStockAlert = int.tryParse(_minStockAlertController.text) ?? 5;
     int maxStockAlert = int.tryParse(_maxStockAlertController.text) ?? 100;
@@ -393,12 +451,10 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
       'name': _nameController.text,
       'description': _descriptionController.text.isEmpty ? null : _descriptionController.text,
       'list_price': double.parse(_priceController.text),
-      'packaging': _packagingController.text.isEmpty ? null : _packagingController.text,
+      'packaging': _getPackagingText(), // ✅ Utilisation du nouveau format
       'is_promotion': _isPromotion ? 1 : 0,
       'categ_id': _selectedCategoryId,
       'default_code': _codeController.text.isEmpty ? null : _codeController.text,
-
-      // 👇 AJOUT DES DONNÉES DE STOCK
       'stock_quantity': stockQuantity,
       'min_stock_alert': minStockAlert,
       'max_stock_alert': maxStockAlert,
@@ -650,21 +706,109 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                // Conditionnement
+                // ✅ Conditionnement amélioré
                 _buildLabel(localizations.packaging),
                 const SizedBox(height: 8),
-                TextFormField(
-                  controller: _packagingController,
-                  decoration: InputDecoration(
-                    hintText: localizations.packagingHint,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
+
+                // Choix du type de conditionnement
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.grey.shade300),
+                  ),
+                  child: Column(
+                    children: [
+                      // Types prédéfinis
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: _packagingTypes.map((type) {
+                          final isSelected = _selectedPackagingType == type['value'];
+                          return FilterChip(
+                            label: Text(type['label']),
+                            selected: isSelected,
+                            onSelected: (selected) {
+                              setState(() {
+                                _selectedPackagingType = type['value'];
+                                _packagingController.clear();
+                              });
+                            },
+                            selectedColor: AppColors.primary.withOpacity(0.2),
+                            checkmarkColor: AppColors.primary,
+                          );
+                        }).toList(),
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      // Quantité pour le type sélectionné
+                      if (_selectedPackagingType != 'unité' || _packagingQuantityController.text.isNotEmpty)
+                        Row(
+                          children: [
+                            Expanded(
+                              flex: 2,
+                              child: TextFormField(
+                                controller: _packagingQuantityController,
+                                keyboardType: TextInputType.number,
+                                decoration: InputDecoration(
+                                  labelText: 'Quantité',
+                                  hintText: '1',
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              flex: 3,
+                              child: Text(
+                                _packagingTypes.firstWhere(
+                                      (t) => t['value'] == _selectedPackagingType,
+                                  orElse: () => _packagingTypes.first,
+                                )['suffix'],
+                                style: const TextStyle(fontSize: 16),
+                              ),
+                            ),
+                          ],
+                        ),
+
+                      const SizedBox(height: 8),
+
+                      // Ou saisie libre
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              controller: _packagingController,
+                              decoration: InputDecoration(
+                                labelText: 'Ou saisie libre',
+                                hintText: 'Ex: 1.5L bouteille, 6 pack',
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              ),
+                              onChanged: (value) {
+                                if (value.isNotEmpty) {
+                                  setState(() {
+                                    _selectedPackagingType = '';
+                                  });
+                                }
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 16),
 
-                // ===== SECTION STOCK =====
+                // Stock
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
@@ -1073,7 +1217,6 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
     );
   }
 
-  // Widget helper pour les labels
   Widget _buildLabel(String text) {
     return Text(
       text,

@@ -34,6 +34,8 @@ import 'screens/commercant/product_reviews_screen.dart';
 import 'screens/commercant/supplier_products_screen.dart';
 import 'screens/commercant/suppliers_screen.dart';
 import 'screens/notifications_screen.dart';
+import 'screens/commercant/invoice_detail_screen.dart';
+import 'screens/commercant/invoices_screen.dart';
 
 // Services
 import 'services/dashboard_service.dart';
@@ -42,6 +44,8 @@ import 'services/merchant_service.dart';
 import 'services/cart_service.dart';
 import 'services/review_service.dart';
 import 'services/notification_service.dart';
+import 'services/invoice_service.dart';
+
 
 
 void main() async {
@@ -60,6 +64,7 @@ void main() async {
   final merchantService = MerchantService(authService);
   final reviewService = ReviewService(authService);
   final notificationService = NotificationService(authService);
+  final invoiceService = InvoiceService(authService);
 
   // ✅ Injecter TOUS les services dans authService
   authService.setCartService(cartService);
@@ -81,6 +86,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => merchantService),
         ChangeNotifierProvider(create: (_) => reviewService),
         ChangeNotifierProvider(create: (_) => notificationService),
+        ChangeNotifierProvider(create: (_) => invoiceService),
       ],
       child: const MyApp(),
     ),
@@ -163,6 +169,12 @@ class MyApp extends StatelessWidget {
         '/supplier/orders': (context) => const SupplierOrdersScreen(),
 
         '/notifications': (context) => const NotificationsScreen(),
+
+        '/merchant/invoices': (context) => const InvoicesScreen(),
+        '/merchant/invoice-detail': (context) {
+          final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+          return InvoiceDetailScreen(invoiceId: args['invoice_id']);
+        },
 
       },
       onGenerateRoute: (settings) {
