@@ -18,12 +18,25 @@ class NotificationService extends ChangeNotifier {
   bool _hasMore = true;
 
   List<AppNotification> get notifications => List.unmodifiable(_notifications);
-  int get unreadCount => _unreadCount;
+  int get unreadCount => _unreadCount;  // ✅ Déjà correct
   bool get isLoading => _isLoading;
   bool get hasMore => _hasMore;
   String? get error => _error;
 
-  NotificationService(this._authService);
+  NotificationService(this._authService) {
+    // ✅ AJOUTER UN ÉCOUTEUR POUR RECHARGER QUAND L'UTILISATEUR CHANGE
+    _authService.addListener(_onAuthStateChanged);
+  }
+
+  void _onAuthStateChanged() {
+    if (_authService.isAuthenticated) {
+      refresh();
+    } else {
+      _notifications.clear();
+      _unreadCount = 0;
+      _safeNotify();
+    }
+  }
 
   Map<String, String> get _headers => {
     'Content-Type': 'application/json',
@@ -32,14 +45,37 @@ class NotificationService extends ChangeNotifier {
   };
 
   void _safeNotify() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    if (WidgetsBinding.instance != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        notifyListeners();
+      });
+    } else {
       notifyListeners();
-    });
+    }
+  }
+
+  // ✅ AJOUTER UNE MÉTHODE POUR RECHARGER UNIQUEMENT LE COMPTEUR
+  Future<int> refreshUnreadCount() async {
+    try {
+      final response = await http.get(
+        Uri.parse('${AppConstants.baseUrl}/notifications/unread-count'),
+        headers: _headers,
+      );
+
+      final data = json.decode(response.body);
+
+      if (response.statusCode == 200 && data['success']) {
+        _unreadCount = data['data']['unread_count'] ?? 0;
+        _safeNotify();
+        return _unreadCount;
+      }
+    } catch (e) {
+      print('❌ Erreur refresh compteur: $e');
+    }
+    return _unreadCount;
   }
 
   // Charger les notifications avec filtre selon le type d'utilisateur
-  // lib/services/notification_service.dart
-
   Future<bool> loadNotifications({bool reset = false}) async {
     if (reset) {
       _notifications = [];
@@ -71,11 +107,8 @@ class NotificationService extends ChangeNotifier {
       if (response.statusCode == 200 && data['success']) {
         final responseData = NotificationResponse.fromJson(data['data']);
 
-        // ✅ AJOUTER TOUTES LES NOTIFICATIONS SANS FILTRER
         _notifications.addAll(responseData.notifications);
-
-        // ✅ METTRE À JOUR LE COMPTEUR GLOBAL
-        _unreadCount = responseData.unreadCount;
+        _unreadCount = responseData.unreadCount;  // ✅ MIS À JOUR
 
         _currentPage++;
         _hasMore = _currentPage <= responseData.pagination.lastPage;
@@ -118,7 +151,7 @@ class NotificationService extends ChangeNotifier {
     ).toList();
   }
 
-  // Marquer une notification comme lue
+  // ✅ CORRECTION: Marquer une notification comme lue
   Future<bool> markAsRead(String notificationId) async {
     try {
       final response = await http.post(
@@ -129,16 +162,32 @@ class NotificationService extends ChangeNotifier {
       final data = json.decode(response.body);
 
       if (response.statusCode == 200 && data['success']) {
-        await loadNotifications(reset: true);
+        // Mettre à jour localement
+        final index = _notifications.indexWhere((n) => n.id == notificationId);
+        if (index != -1) {
+          // Créer une nouvelle instance avec readAt
+          final old = _notifications[index];
+          _notifications[index] = AppNotification(
+            id: old.id,
+            type: old.type,
+            data: old.data,
+            readAt: DateTime.now(),
+            createdAt: old.createdAt,
+            createdAtRaw: old.createdAtRaw,
+          );
+          _unreadCount--;
+          _safeNotify();
+        }
         return true;
       }
       return false;
     } catch (e) {
+      print('❌ Erreur markAsRead: $e');
       return false;
     }
   }
 
-  // Marquer toutes les notifications comme lues
+  // ✅ CORRECTION: Marquer toutes comme lues
   Future<bool> markAllAsRead() async {
     try {
       final response = await http.post(
@@ -149,7 +198,22 @@ class NotificationService extends ChangeNotifier {
       final data = json.decode(response.body);
 
       if (response.statusCode == 200 && data['success']) {
-        await loadNotifications(reset: true);
+        // Mettre à jour localement
+        for (int i = 0; i < _notifications.length; i++) {
+          final old = _notifications[i];
+          if (old.readAt == null) {
+            _notifications[i] = AppNotification(
+              id: old.id,
+              type: old.type,
+              data: old.data,
+              readAt: DateTime.now(),
+              createdAt: old.createdAt,
+              createdAtRaw: old.createdAtRaw,
+            );
+          }
+        }
+        _unreadCount = 0;
+        _safeNotify();
         return true;
       }
       return false;
@@ -169,8 +233,11 @@ class NotificationService extends ChangeNotifier {
       final data = json.decode(response.body);
 
       if (response.statusCode == 200 && data['success']) {
+        final wasUnread = _notifications.firstWhere((n) => n.id == notificationId).readAt == null;
         _notifications.removeWhere((n) => n.id == notificationId);
-        _updateUnreadCount();
+        if (wasUnread) {
+          _unreadCount--;
+        }
         _safeNotify();
         return true;
       }
@@ -207,23 +274,32 @@ class NotificationService extends ChangeNotifier {
     await loadNotifications(reset: true);
   }
 
-  // Mettre à jour le compteur de non lues
-  void _updateUnreadCount() {
-    final userType = _authService.currentUser?.userType;
+  void clearLocalNotifications() {
+    _notifications.clear();
+    _unreadCount = 0;
+    _currentPage = 1;
+    _hasMore = true;
+    _error = null;
+    _isLoading = false;
+    _safeNotify();
+    print('✅ Notifications locales vidées');
+  }
 
-    if (userType == 'fournisseur') {
-      _unreadCount = _notifications.where((n) =>
-      !n.isRead && (n.type == 'new_order' || n.type == 'order_cancelled')
-      ).length;
-    } else if (userType == 'commercant') {
-      _unreadCount = _notifications.where((n) =>
-      !n.isRead && (n.type == 'order_confirmed' ||
-          n.type == 'order_shipped' ||
-          n.type == 'order_delivered' ||
-          n.type == 'order_cancelled')
-      ).length;
-    } else {
-      _unreadCount = _notifications.where((n) => !n.isRead).length;
-    }
+  // ✅ AJOUTER UNE MÉTHODE POUR ÉCOUTER LES NOTIFICATIONS EN TEMPS RÉEL
+  void startListening() {
+    // Vous pouvez implémenter un WebSocket ou un polling ici
+    // Pour l'instant, on fait un polling simple toutes les 30 secondes
+    Future.delayed(const Duration(seconds: 30), () {
+      if (_authService.isAuthenticated) {
+        refreshUnreadCount();
+        startListening();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _authService.removeListener(_onAuthStateChanged);
+    super.dispose();
   }
 }

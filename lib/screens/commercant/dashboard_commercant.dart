@@ -208,7 +208,7 @@ class _DashboardCommercantState extends State<DashboardCommercant> {
                   _buildEmptyState(localizations.noProducts)
                 else
                   SizedBox(
-                    height: 240,
+                    height: 260,
                     child: ListView.builder(
                       scrollDirection: Axis.horizontal,
                       itemCount: merchantService.popularProducts.length,
@@ -218,7 +218,10 @@ class _DashboardCommercantState extends State<DashboardCommercant> {
                           padding: EdgeInsets.only(
                             right: index < merchantService.popularProducts.length - 1 ? 12 : 0,
                           ),
-                          child: _buildProductCard(product),
+                          child: SizedBox(
+                            width: 150,
+                            child: _buildProductCard(product),
+                          ),
                         );
                       },
                     ),
@@ -651,141 +654,148 @@ class _DashboardCommercantState extends State<DashboardCommercant> {
   }
 
   // CARTE PRODUIT
+  // lib/screens/commercant/dashboard_commercant.dart
+
   Widget _buildProductCard(Product product) {
     final localizations = AppLocalizations.of(context)!;
     final cartService = Provider.of<CartService>(context, listen: false);
 
     return GestureDetector(
-        onTap: () {
-          // ✅ Navigation vers le détail du produit
-          Navigator.pushNamed(
-            context,
-            '/merchant/product-detail',
-            arguments: {'product': product},
-          );
-        },
-        child: Container(
-      width: 150,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Image
-          ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-            child: ProductImage(
-              productId: product.id,
-              imageUrl: product.imageUrl,
-              width: double.infinity,
-              height: 100,
-              fit: BoxFit.cover,
+      onTap: () {
+        Navigator.pushNamed(
+          context,
+          '/merchant/product-detail',
+          arguments: {'product': product},
+        );
+      },
+      child: Container(
+        width: 150,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.1),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
             ),
-          ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min, // 👈 AJOUTER
+          children: [
+            // Image
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+              child: ProductImage(
+                productId: product.id,
+                imageUrl: product.imageUrl,
+                width: double.infinity,
+                height: 100,
+                fit: BoxFit.cover,
+              ),
+            ),
 
-          // Contenu
-          Padding(
-            padding: const EdgeInsets.all(10),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Nom du produit
-                Text(
-                  product.name,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-
-                // Conditionnement
-                if (product.packaging != null)
+            // Contenu
+            Padding(
+              padding: const EdgeInsets.all(10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min, // 👈 AJOUTER
+                children: [
+                  // Nom du produit
                   Text(
-                    product.packaging!,
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: Colors.grey.shade600,
+                    product.name,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
                     ),
-                    maxLines: 1,
+                    maxLines: 2, // 👈 CHANGER maxLines à 2
                     overflow: TextOverflow.ellipsis,
                   ),
+                  const SizedBox(height: 4),
 
-                const SizedBox(height: 6),
+                  // Conditionnement
+                  if (product.packaging != null && product.packaging!.isNotEmpty)
+                    Text(
+                      product.packaging!,
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: Colors.grey.shade600,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
 
-                // Prix
-                Row(
-                  children: [
-                    if (product.isInPromotion)
-                      Padding(
-                        padding: const EdgeInsets.only(right: 4),
-                        child: Text(
-                          '${product.listPrice.toStringAsFixed(2)}',
-                          style: const TextStyle(
-                            decoration: TextDecoration.lineThrough,
-                            color: Colors.grey,
-                            fontSize: 10,
+                  const SizedBox(height: 8),
+
+                  // Prix
+                  Row(
+                    children: [
+                      if (product.isInPromotion)
+                        Padding(
+                          padding: const EdgeInsets.only(right: 4),
+                          child: Text(
+                            '${product.listPrice.toStringAsFixed(2)}',
+                            style: const TextStyle(
+                              decoration: TextDecoration.lineThrough,
+                              color: Colors.grey,
+                              fontSize: 10,
+                            ),
                           ),
                         ),
-                      ),
-                    Text(
-                      '${product.currentPrice.toStringAsFixed(2)} ${localizations.currency}',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: product.isInPromotion ? Colors.red : AppColors.primary,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 8),
-
-                // Bouton Ajouter
-                SizedBox(
-                  width: double.infinity,
-                  height: 32,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      cartService.addToCart(product, quantity: 1);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('${product.name} ajouté au panier'),
-                          backgroundColor: Colors.green,
-                          duration: const Duration(seconds: 1),
+                      Expanded(
+                        child: Text(
+                          '${product.currentPrice.toStringAsFixed(2)} ${localizations.currency}',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: product.isInPromotion ? Colors.red : AppColors.primary,
+                            fontSize: 12,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      padding: EdgeInsets.zero,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(6),
                       ),
-                    ),
-                    child: const Text(
-                      'Ajouter',
-                      style: TextStyle(fontSize: 11),
+                    ],
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  // Bouton Ajouter
+                  SizedBox(
+                    width: double.infinity,
+                    height: 28,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        cartService.addToCart(product, quantity: 1);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('${product.name} ajouté au panier'),
+                            backgroundColor: Colors.green,
+                            duration: const Duration(seconds: 1),
+                          ),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        padding: EdgeInsets.zero,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                      ),
+                      child: const Text(
+                        'Ajouter',
+                        style: TextStyle(fontSize: 11),
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
-      ),
+          ],
         ),
+      ),
     );
   }
 

@@ -19,16 +19,24 @@ class NotificationIcon extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<NotificationService>(
       builder: (context, service, child) {
+        // ✅ Récupérer le compteur de non lues
+        final unreadCount = service.unreadCount;
+
         return Stack(
           clipBehavior: Clip.none,
           children: [
             IconButton(
               icon: Icon(Icons.notifications_outlined, color: color, size: size),
               onPressed: () {
-                Navigator.pushNamed(context, '/notifications');
+                // ✅ Marquer comme vues lorsqu'on ouvre la page
+                Navigator.pushNamed(context, '/notifications').then((_) {
+                  // Rafraîchir le compteur quand on revient
+                  service.refreshUnreadCount();
+                });
               },
             ),
-            if (service.unreadCount > 0)
+            // ✅ Afficher le badge uniquement si > 0
+            if (unreadCount > 0)
               Positioned(
                 right: 6,
                 top: 6,
@@ -44,7 +52,7 @@ class NotificationIcon extends StatelessWidget {
                   ),
                   child: Center(
                     child: Text(
-                      service.unreadCount > 9 ? '9+' : '${service.unreadCount}',
+                      unreadCount > 99 ? '99+' : '$unreadCount',
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 10,

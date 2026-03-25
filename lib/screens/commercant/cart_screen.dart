@@ -315,6 +315,9 @@ class _CartScreenState extends State<CartScreen> {
   }
 
   // Article individuel
+
+  // lib/screens/commercant/cart_screen.dart
+
   Widget _buildCartItem(CartItem item) {
     final localizations = AppLocalizations.of(context)!;
     final cartService = Provider.of<CartService>(context, listen: false);
@@ -351,23 +354,49 @@ class _CartScreenState extends State<CartScreen> {
                 overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 4),
-              if (item.product.packaging != null)
-                Text(
-                  item.product.packaging!,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFF8A9AA8),
+
+              // AFFICHAGE DU CONDITIONNEMENT
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  item.packagingDisplay,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Colors.orange.shade700,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
+              ),
+
+              const SizedBox(height: 4),
+
+              // AFFICHAGE DE LA QUANTITÉ AVEC DÉTAIL
+              Text(
+                item.quantityDisplay,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: Color(0xFF8A9AA8),
+                ),
+              ),
+
               const SizedBox(height: 8),
+
+              // 👇 CORRECTION DU DÉBORDEMENT - AJOUTER Expanded
               Row(
                 children: [
-                  // Prix unitaire
-                  Text(
-                    '${item.product.currentPrice.toStringAsFixed(2)} ${localizations.currency}',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.grey.shade700,
+                  // Prix unitaire - Utiliser Flexible
+                  Flexible(
+                    child: Text(
+                      '${item.effectivePrice.toStringAsFixed(2)} ${localizations.currency}',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey.shade700,
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -377,13 +406,16 @@ class _CartScreenState extends State<CartScreen> {
                     color: Colors.grey.shade300,
                   ),
                   const SizedBox(width: 8),
-                  // Sous-total
-                  Text(
-                    'Sous-total: ${item.totalPrice.toStringAsFixed(2)} ${localizations.currency}',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.primary,
+                  // Sous-total - Utiliser Flexible
+                  Flexible(
+                    child: Text(
+                      'Sous-total: ${item.totalPrice.toStringAsFixed(2)} ${localizations.currency}',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.primary,
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ],
@@ -652,11 +684,12 @@ class _CartScreenState extends State<CartScreen> {
               Padding(
                 padding: const EdgeInsets.only(top: 12),
                 child: Text(
-                  'Votre commande sera divisée en $supplierCount commandes (une par fournisseur)',
+                  '💡 Votre commande sera divisée en $supplierCount commandes distinctes (une par fournisseur)',
                   style: TextStyle(
                     fontSize: 12,
-                    color: Colors.grey.shade600,
+                    color: Colors.orange.shade700,
                     fontStyle: FontStyle.italic,
+                    fontWeight: FontWeight.w500,
                   ),
                   textAlign: TextAlign.center,
                 ),

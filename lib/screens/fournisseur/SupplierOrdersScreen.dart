@@ -36,41 +36,13 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
   // ✅ Filtrer les items du fournisseur
 
   List<OrderItem> _getSupplierItems(Order order) {
-    if (order.items == null) {
-      print('❌ order.items est null');
-      return [];
-    }
-
-    final supplierId = _currentSupplierId;
-    if (supplierId == null) {
-      print('❌ supplierId est null');
-      return [];
-    }
-
-    print('🔍 Fournisseur connecté ID: $supplierId');
-    print('📦 Commande: ${order.orderNumber}');
-    print('   Total items dans commande: ${order.items!.length}');
-
-    List<OrderItem> filtered = [];
-
-    for (var item in order.items!) {
-      int? itemSupplierId = item.productSnapshot?['supplier_id'];
-      print('   - Produit: ${item.productName}');
-      print('     supplier_id dans snapshot: $itemSupplierId');
-      print('     correspond? ${itemSupplierId == supplierId}');
-
-      if (itemSupplierId == supplierId) {
-        filtered.add(item);
-      }
-    }
-
-    print('   ✅ Items filtrés: ${filtered.length}');
-    return filtered;
+    // Plus besoin de filtrer - la commande contient déjà uniquement les produits du fournisseur
+    return order.items ?? [];
   }
   // ✅ VERSION CORRECTE
   double _getSupplierTotal(Order order) {
-    final supplierItems = _getSupplierItems(order);
-    return supplierItems.fold(0.0, (sum, item) => sum + item.subtotal);
+    // Le total de la commande est déjà le total pour ce fournisseur
+    return order.total;
   }
 
   @override
@@ -940,7 +912,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Total (vos produits)',
+                    'Total',
                     style: const TextStyle(
                       fontSize: 12,
                       color: Color(0xFF8A9AA8),

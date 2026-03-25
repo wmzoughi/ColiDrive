@@ -15,6 +15,9 @@ import 'compte_screen.dart';
 import 'product_detail_screen.dart';
 import '../../widgets/cart_icon_with_badge.dart';
 import '../../widgets/notification_icon.dart';
+import '../../services/barcode_service.dart';
+import 'scan_result_screen.dart';
+import '../../widgets/barcode_scanner.dart';
 
 class ProductsScreen extends StatefulWidget {
   const ProductsScreen({Key? key}) : super(key: key);
@@ -211,6 +214,40 @@ class _ProductsScreenState extends State<ProductsScreen> {
         ),
 
         actions: [
+          IconButton(
+            icon: const Icon(Icons.qr_code_scanner, color: Color(0xFF2D3A4F)),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => BarcodeScanner(
+                    onScan: (code) async {
+                      final barcodeService = Provider.of<BarcodeService>(context, listen: false);
+                      final success = await barcodeService.scanBarcode(code);
+
+                      if (success) {
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const ScanResultScreen(),
+                          ),
+                        );
+                      } else {
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(barcodeService.error ?? 'Produit non trouvé'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                    },
+                    onClose: () => Navigator.pop(context),
+                  ),
+                ),
+              );
+            },
+          ),
           NotificationIcon(color: const Color(0xFF2D3A4F)),
           IconButton(
             icon: CartIconWithBadge(), // 👈 Utilise le widget personnalisé
@@ -438,11 +475,28 @@ class _ProductsScreenState extends State<ProductsScreen> {
     );
   }
 
+  // lib/screens/commercant/products_screen.dart
+
   Widget _buildProductCard(Product product) {
     final localizations = AppLocalizations.of(context)!;
 
+    // Obtenir le prix selon le conditionnement par défaut
+    double displayPrice = product.currentPrice;
+    String displayUnit = 'pièce';
+
+    if (product.packagings != null && product.packagings!.isNotEmpty) {
+      final defaultPackaging = product.packagings!.firstWhere(
+            (p) => p.isDefault,
+        orElse: () => product.packagings!.first,
+      );
+      if (defaultPackaging.price != null) {
+        displayPrice = defaultPackaging.price!;
+        displayUnit = defaultPackaging.name.toLowerCase();
+      }
+    }
+
     return Container(
-      height: 280,
+      height: 280, // 👈 Hauteur fixe
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -456,80 +510,110 @@ class _ProductsScreenState extends State<ProductsScreen> {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min, // 👈 AJOUTER mainAxisSize.min
         children: [
-          ProductImage(
-            productId: product.id,
-            imageUrl: product.imageUrl,
-            width: double.infinity,
-            height: 120,
-            fit: BoxFit.cover,
+          // Image - hauteur fixe
+          ClipRRect(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+            child: ProductImage(
+              productId: product.id,
+              imageUrl: product.imageUrl,
+              width: double.infinity,
+              height: 120,
+              fit: BoxFit.cover,
+            ),
           ),
-          Padding(
-            padding: const EdgeInsets.all(10),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  product.name,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF2D3A4F),
-                    fontSize: 14,
+
+          // Contenu - avec Expanded pour prendre le reste
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min, // 👈 AJOUTER mainAxisSize.min
+                children: [
+                  Text(
+                    product.name,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF2D3A4F),
+                      fontSize: 14,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  product.packaging ?? '',
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: Color(0xFF8A9AA8),
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    if (product.isInPromotion)
-                      Padding(
-                        padding: const EdgeInsets.only(right: 4),
-                        child: Text(
-                          '${product.listPrice.toStringAsFixed(2)}',
-                          style: const TextStyle(
-                            decoration: TextDecoration.lineThrough,
-                            color: Colors.grey,
-                            fontSize: 10,
+                  const SizedBox(height: 4),
+                  if (product.packaging != null && product.packaging!.isNotEmpty)
+                    Text(
+                      product.packaging!,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFF8A9AA8),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  const SizedBox(height: 8),
+                  // Prix - avec Flexible pour éviter le débordement
+                  Flexible(
+                    child: Row(
+                      children: [
+                        if (product.isInPromotion)
+                          Flexible(
+                            child: Text(
+                              '${product.listPrice.toStringAsFixed(2)}',
+                              style: const TextStyle(
+                                decoration: TextDecoration.lineThrough,
+                                color: Colors.grey,
+                                fontSize: 10,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                            '${displayPrice.toStringAsFixed(2)} ${localizations.currency}',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: product.isInPromotion ? Colors.red : AppColors.primary,
+                              fontSize: 14,
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                      ),
-                    Text(
-                      '${product.currentPrice.toStringAsFixed(2)} ${localizations.currency}',
+                        if (displayUnit != 'pièce')
+                          Flexible(
+                            child: Text(
+                              ' / $displayUnit',
+                              style: const TextStyle(
+                                fontSize: 10,
+                                color: Colors.grey,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  // Badge quantité minimum
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      '${localizations.min}: 6',
                       style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: product.isInPromotion ? Colors.red : AppColors.primary,
-                        fontSize: 14,
+                        fontSize: 10,
+                        color: Colors.grey.shade700,
                       ),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(4),
                   ),
-                  child: Text(
-                    '${localizations.min}: 6',
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: Colors.grey.shade700,
-                    ),
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ],

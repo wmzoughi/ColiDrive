@@ -29,7 +29,6 @@ import 'services/order_service.dart';
 import 'screens/fournisseur/SupplierOrdersScreen.dart';
 import 'screens/commercant/product_reviews_screen.dart';
 
-
 // 👇 NOUVEAUX IMPORTS POUR LE FLUX MULTIVENDEUR
 import 'screens/commercant/supplier_products_screen.dart';
 import 'screens/commercant/suppliers_screen.dart';
@@ -45,8 +44,7 @@ import 'services/cart_service.dart';
 import 'services/review_service.dart';
 import 'services/notification_service.dart';
 import 'services/invoice_service.dart';
-
-
+import 'services/barcode_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -65,11 +63,15 @@ void main() async {
   final reviewService = ReviewService(authService);
   final notificationService = NotificationService(authService);
   final invoiceService = InvoiceService(authService);
+  final barcodeService = BarcodeService(authService);
 
   // ✅ Injecter TOUS les services dans authService
   authService.setCartService(cartService);
   authService.setOrderService(orderService);
   authService.setDashboardService(dashboardService);
+
+  // ✅ AJOUTER LA NOTIFICATION SERVICE DANS AUTH SERVICE (optionnel)
+  authService.setNotificationService(notificationService);
 
   runApp(
     MultiProvider(
@@ -87,14 +89,44 @@ void main() async {
         ChangeNotifierProvider(create: (_) => reviewService),
         ChangeNotifierProvider(create: (_) => notificationService),
         ChangeNotifierProvider(create: (_) => invoiceService),
+        ChangeNotifierProvider(create: (_) => barcodeService),
       ],
       child: const MyApp(),
     ),
   );
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({Key? key}) : super(key: key);
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  @override
+  void initState() {
+    super.initState();
+
+    // ✅ INITIALISER LES NOTIFICATIONS APRÈS LE BUILD
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initializeNotifications();
+    });
+  }
+
+  void _initializeNotifications() async {
+    // Attendre que le contexte soit disponible
+    await Future.delayed(const Duration(milliseconds: 500));
+
+    final authService = Provider.of<AuthService>(context, listen: false);
+    final notificationService = Provider.of<NotificationService>(context, listen: false);
+
+    // ✅ SI L'UTILISATEUR EST CONNECTÉ, CHARGER LES NOTIFICATIONS
+    if (authService.isAuthenticated) {
+      await notificationService.loadNotifications(reset: true);
+      notificationService.startListening(); // Démarrer le polling pour les mises à jour en temps réel
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -158,7 +190,6 @@ class MyApp extends StatelessWidget {
         '/merchant/account': (context) => const CompteScreenM(),
         '/merchant/checkout': (context) => const CheckoutScreen(),
 
-
         // 👇 NOUVELLES ROUTES POUR LE FLUX MULTIVENDEUR
         '/merchant/suppliers': (context) => const SuppliersScreen(),
 
@@ -175,7 +206,6 @@ class MyApp extends StatelessWidget {
           final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
           return InvoiceDetailScreen(invoiceId: args['invoice_id']);
         },
-
       },
       onGenerateRoute: (settings) {
         // Route avec paramètres pour les produits d'un fournisseur spécifique

@@ -46,8 +46,6 @@ class OrderService extends ChangeNotifier {
     return headers;
   }
 
-// lib/services/order_service.dart
-
   Future<Map<String, dynamic>> createOrder(OrderRequest orderRequest) async {
     _setLoading(true);
     _clearError();
@@ -101,14 +99,60 @@ class OrderService extends ChangeNotifier {
       }
 
       if (response.statusCode == 201 && data['success'] == true) {
-        _lastOrder = Order.fromJson(data['data']['order']);
+        // ✅ CORRECTION: Gérer correctement la réponse avec "orders" (liste)
+        List<Order> createdOrders = [];
+
+        if (data['data'] != null) {
+          // Cas où la réponse contient "orders" (liste)
+          if (data['data']['orders'] != null && data['data']['orders'] is List) {
+            final ordersList = data['data']['orders'] as List;
+            print('📦 Nombre de commandes créées: ${ordersList.length}');
+
+            for (var orderJson in ordersList) {
+              try {
+                // ✅ Créer une copie modifiable du JSON
+                Map<String, dynamic> orderMap = Map<String, dynamic>.from(orderJson);
+
+                // ✅ S'assurer que 'supplier' existe (peut être null)
+                if (!orderMap.containsKey('supplier')) {
+                  orderMap['supplier'] = null;
+                }
+
+                final order = Order.fromJson(orderMap);
+                createdOrders.add(order);
+                print('✅ Commande parsée: ${order.orderNumber}');
+              } catch (e) {
+                print('❌ Erreur parsing commande individuelle: $e');
+              }
+            }
+
+            if (createdOrders.isNotEmpty) {
+              _lastOrder = createdOrders.first;
+            }
+          }
+          // Cas où la réponse contient "order" (objet unique)
+          else if (data['data']['order'] != null) {
+            _lastOrder = Order.fromJson(data['data']['order']);
+            createdOrders.add(_lastOrder!);
+          }
+        }
+
+        // ✅ VIDER LE PANIER LOCAL APRÈS COMMANDE RÉUSSIE
         _cartService.clearLocalCart();
 
+        // ✅ FORCER LE RECHARGEMENT DU PANIER DEPUIS L'API
+        await _cartService.loadCart();
+
         _setLoading(false);
+
+        // ✅ Retourner les informations des commandes créées
         return {
           'success': true,
           'order': _lastOrder,
-          'order_number': data['data']['order_number'],
+          'orders': createdOrders,
+          'order_count': createdOrders.length,
+          'order_number': createdOrders.isNotEmpty ? createdOrders.first.orderNumber : null,
+          'order_numbers': createdOrders.map((o) => o.orderNumber).toList(),
         };
       } else {
         String errorMessage = data['message'] ?? 'Erreur lors de la création de la commande';
@@ -131,6 +175,7 @@ class OrderService extends ChangeNotifier {
       };
     }
   }
+
   Future<List<Order>> getMyOrders({String? status}) async {
     _setLoading(true);
     _clearError();
@@ -346,7 +391,6 @@ class OrderService extends ChangeNotifier {
       return false;
     }
   }
-
 
   Future<Map<String, dynamic>> getOrderStats() async {
     try {

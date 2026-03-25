@@ -119,7 +119,7 @@ abstract class AppLocalizations {
   /// No description provided for @email.
   ///
   /// In fr, this message translates to:
-  /// **'E-mail'**
+  /// **'Email'**
   String get email;
 
   /// No description provided for @password.
@@ -215,13 +215,13 @@ abstract class AppLocalizations {
   /// No description provided for @paid.
   ///
   /// In fr, this message translates to:
-  /// **'Payé'**
+  /// **'Payée'**
   String get paid;
 
   /// No description provided for @unpaid.
   ///
   /// In fr, this message translates to:
-  /// **'Impayé'**
+  /// **'Impayée'**
   String get unpaid;
 
   /// No description provided for @myAccount.
@@ -755,7 +755,7 @@ abstract class AppLocalizations {
   /// No description provided for @shipping.
   ///
   /// In fr, this message translates to:
-  /// **'Frais de livraison'**
+  /// **'Livraison'**
   String get shipping;
 
   /// No description provided for @total.
@@ -1081,6 +1081,282 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Bientôt épuisé'**
   String get soonOut;
+
+  /// No description provided for @invoices.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mes factures'**
+  String get invoices;
+
+  /// No description provided for @invoice.
+  ///
+  /// In fr, this message translates to:
+  /// **'Facture'**
+  String get invoice;
+
+  /// No description provided for @invoice_number.
+  ///
+  /// In fr, this message translates to:
+  /// **'N° Facture'**
+  String get invoice_number;
+
+  /// No description provided for @invoice_date.
+  ///
+  /// In fr, this message translates to:
+  /// **'Date'**
+  String get invoice_date;
+
+  /// No description provided for @invoice_total.
+  ///
+  /// In fr, this message translates to:
+  /// **'Total'**
+  String get invoice_total;
+
+  /// No description provided for @invoice_status.
+  ///
+  /// In fr, this message translates to:
+  /// **'Statut'**
+  String get invoice_status;
+
+  /// No description provided for @invoice_paid.
+  ///
+  /// In fr, this message translates to:
+  /// **'Payée'**
+  String get invoice_paid;
+
+  /// No description provided for @invoice_pending.
+  ///
+  /// In fr, this message translates to:
+  /// **'En attente'**
+  String get invoice_pending;
+
+  /// No description provided for @invoice_download.
+  ///
+  /// In fr, this message translates to:
+  /// **'Télécharger'**
+  String get invoice_download;
+
+  /// No description provided for @invoice_details.
+  ///
+  /// In fr, this message translates to:
+  /// **'Détails'**
+  String get invoice_details;
+
+  /// No description provided for @invoice_customer.
+  ///
+  /// In fr, this message translates to:
+  /// **'Client'**
+  String get invoice_customer;
+
+  /// No description provided for @invoice_company.
+  ///
+  /// In fr, this message translates to:
+  /// **'Société'**
+  String get invoice_company;
+
+  /// No description provided for @invoice_email.
+  ///
+  /// In fr, this message translates to:
+  /// **'Email'**
+  String get invoice_email;
+
+  /// No description provided for @invoice_phone.
+  ///
+  /// In fr, this message translates to:
+  /// **'Téléphone'**
+  String get invoice_phone;
+
+  /// No description provided for @invoice_address.
+  ///
+  /// In fr, this message translates to:
+  /// **'Adresse'**
+  String get invoice_address;
+
+  /// No description provided for @invoice_city.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ville'**
+  String get invoice_city;
+
+  /// No description provided for @invoice_zip.
+  ///
+  /// In fr, this message translates to:
+  /// **'Code postal'**
+  String get invoice_zip;
+
+  /// No description provided for @invoice_items.
+  ///
+  /// In fr, this message translates to:
+  /// **'Articles'**
+  String get invoice_items;
+
+  /// No description provided for @invoice_quantity.
+  ///
+  /// In fr, this message translates to:
+  /// **'Qté'**
+  String get invoice_quantity;
+
+  /// No description provided for @invoice_price.
+  ///
+  /// In fr, this message translates to:
+  /// **'Prix'**
+  String get invoice_price;
+
+  /// No description provided for @invoice_subtotal.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sous-total'**
+  String get invoice_subtotal;
+
+  /// No description provided for @invoice_tax.
+  ///
+  /// In fr, this message translates to:
+  /// **'TVA (20%)'**
+  String get invoice_tax;
+
+  /// No description provided for @invoice_shipping.
+  ///
+  /// In fr, this message translates to:
+  /// **'Livraison'**
+  String get invoice_shipping;
+
+  /// No description provided for @invoice_grand_total.
+  ///
+  /// In fr, this message translates to:
+  /// **'Total TTC'**
+  String get invoice_grand_total;
+
+  /// No description provided for @invoice_payment_method.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mode de paiement'**
+  String get invoice_payment_method;
+
+  /// No description provided for @invoice_cash.
+  ///
+  /// In fr, this message translates to:
+  /// **'Espèces'**
+  String get invoice_cash;
+
+  /// No description provided for @invoice_card.
+  ///
+  /// In fr, this message translates to:
+  /// **'Carte'**
+  String get invoice_card;
+
+  /// No description provided for @invoice_no_invoices.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune facture'**
+  String get invoice_no_invoices;
+
+  /// No description provided for @invoice_no_invoices_desc.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vos factures apparaîtront ici après vos achats'**
+  String get invoice_no_invoices_desc;
+
+  /// No description provided for @due_date.
+  ///
+  /// In fr, this message translates to:
+  /// **'Date d\'échéance'**
+  String get due_date;
+
+  /// No description provided for @billed_to.
+  ///
+  /// In fr, this message translates to:
+  /// **'Facturé à'**
+  String get billed_to;
+
+  /// No description provided for @customer.
+  ///
+  /// In fr, this message translates to:
+  /// **'Client'**
+  String get customer;
+
+  /// No description provided for @zip_code.
+  ///
+  /// In fr, this message translates to:
+  /// **'Code postal'**
+  String get zip_code;
+
+  /// No description provided for @items.
+  ///
+  /// In fr, this message translates to:
+  /// **'Articles'**
+  String get items;
+
+  /// No description provided for @product.
+  ///
+  /// In fr, this message translates to:
+  /// **'Produit'**
+  String get product;
+
+  /// No description provided for @reference.
+  ///
+  /// In fr, this message translates to:
+  /// **'Référence'**
+  String get reference;
+
+  /// No description provided for @unit_price.
+  ///
+  /// In fr, this message translates to:
+  /// **'Prix unitaire'**
+  String get unit_price;
+
+  /// No description provided for @payment_method.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mode de paiement'**
+  String get payment_method;
+
+  /// No description provided for @payment_status.
+  ///
+  /// In fr, this message translates to:
+  /// **'Statut'**
+  String get payment_status;
+
+  /// No description provided for @download_pdf.
+  ///
+  /// In fr, this message translates to:
+  /// **'Télécharger PDF'**
+  String get download_pdf;
+
+  /// No description provided for @share_pdf.
+  ///
+  /// In fr, this message translates to:
+  /// **'Partager'**
+  String get share_pdf;
+
+  /// No description provided for @no_invoices.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune facture'**
+  String get no_invoices;
+
+  /// No description provided for @total_invoiced.
+  ///
+  /// In fr, this message translates to:
+  /// **'Total facturé'**
+  String get total_invoiced;
+
+  /// No description provided for @filter_all.
+  ///
+  /// In fr, this message translates to:
+  /// **'Toutes'**
+  String get filter_all;
+
+  /// No description provided for @filter_this_month.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce mois'**
+  String get filter_this_month;
+
+  /// No description provided for @filter_last_month.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mois dernier'**
+  String get filter_last_month;
 }
 
 class _AppLocalizationsDelegate

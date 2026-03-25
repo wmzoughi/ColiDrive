@@ -1,13 +1,17 @@
 // lib/screens/fournisseur/add_edit_product_screen.dart
-
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
+import 'package:http/http.dart' as http;
+import 'package:mobile_scanner/mobile_scanner.dart';
+import 'dart:async';
 import '../../models/category.dart';
 import '../../models/product.dart';
 import '../../services/product_service.dart';
+import '../../services/auth_service.dart';
 import '../../utils/constants.dart';
 import '../../widgets/product_image.dart';
 import '../../l10n/app_localizations.dart';
@@ -33,21 +37,23 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _priceController = TextEditingController();
-
-  // ✅ Gestion améliorée du conditionnement
   final _packagingController = TextEditingController();
-  final _packagingQuantityController = TextEditingController();
-  String _selectedPackagingType = 'unité'; // unité, carton, pack, palette
-
   final _codeController = TextEditingController();
+  final _barcodeController = TextEditingController();
   final _promoPriceController = TextEditingController();
   final _promoStartController = TextEditingController();
   final _promoEndController = TextEditingController();
 
-  // Gestion du stock
+  // Contrôleurs pour le stock
   final _stockQuantityController = TextEditingController();
   final _minStockAlertController = TextEditingController();
   final _maxStockAlertController = TextEditingController();
+
+  // 👇 NOUVEAUX CONTRÔLEURS POUR LES CONDITIONNEMENTS
+  final _baseUnitController = TextEditingController();
+  final _defaultPackagingQuantityController = TextEditingController();
+  final _unitWeightController = TextEditingController();
+  final _unitVolumeController = TextEditingController();
 
   File? _imageFile;
   final picker = ImagePicker();
@@ -56,17 +62,12 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
   bool _isPromotion = false;
   bool _isLoading = false;
   bool _isAddingCategory = false;
+  bool? _barcodeExists;
+  Timer? _barcodeDebounceTimer;
+
   final TextEditingController _newCategoryController = TextEditingController();
 
-  // Types de conditionnement disponibles
-  final List<Map<String, dynamic>> _packagingTypes = [
-    {'value': 'unité', 'label': 'À l\'unité', 'hint': 'Ex: 1 pièce', 'suffix': 'pièce(s)'},
-    {'value': 'carton', 'label': 'Carton', 'hint': 'Ex: 12 pièces', 'suffix': 'carton(s)'},
-    {'value': 'pack', 'label': 'Pack', 'hint': 'Ex: 4 pièces', 'suffix': 'pack(s)'},
-    {'value': 'palette', 'label': 'Palette', 'hint': 'Ex: 120 pièces', 'suffix': 'palette(s)'},
-    {'value': 'bouteille', 'label': 'Bouteille', 'hint': 'Ex: 1.5L', 'suffix': 'bouteille(s)'},
-    {'value': 'caisse', 'label': 'Caisse', 'hint': 'Ex: 6 bouteilles', 'suffix': 'caisse(s)'},
-  ];
+  Timer? _barcodeDebounce;
 
   @override
   void initState() {
@@ -80,21 +81,24 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
     });
 
     if (widget.product != null) {
-      // Produit existant
       _nameController.text = widget.product!.name;
       _descriptionController.text = widget.product!.description ?? '';
       _priceController.text = widget.product!.listPrice.toString();
-
-      // ✅ Parser le conditionnement existant
-      _parseExistingPackaging(widget.product!.packaging ?? '');
-
+      _packagingController.text = widget.product!.packaging ?? '';
       _codeController.text = widget.product!.defaultCode ?? '';
+      _barcodeController.text = widget.product!.barcode ?? '';
       _selectedCategoryId = widget.product!.categoryId;
       _isPromotion = widget.product!.isPromotion;
 
       _stockQuantityController.text = widget.product!.stockQuantity?.toString() ?? '0';
       _minStockAlertController.text = widget.product!.minStockAlert?.toString() ?? '5';
       _maxStockAlertController.text = widget.product!.maxStockAlert?.toString() ?? '100';
+
+      // 👇 CHARGER LES DONNÉES DE CONDITIONNEMENT
+      _baseUnitController.text = widget.product!.baseUnit ?? 'piece';
+      _defaultPackagingQuantityController.text = widget.product!.defaultPackagingQuantity?.toString() ?? '1';
+      _unitWeightController.text = widget.product!.unitWeight?.toString() ?? '';
+      _unitVolumeController.text = widget.product!.unitVolume?.toString() ?? '';
 
       if (widget.product!.promotionPrice != null) {
         _promoPriceController.text = widget.product!.promotionPrice!.toString();
@@ -108,56 +112,16 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
         '${widget.product!.promotionEnd!.year}-${widget.product!.promotionEnd!.month.toString().padLeft(2, '0')}-${widget.product!.promotionEnd!.day.toString().padLeft(2, '0')}';
       }
     } else {
-      // Nouveau produit
       _stockQuantityController.text = '0';
       _minStockAlertController.text = '5';
       _maxStockAlertController.text = '100';
-      _packagingQuantityController.text = '1';
+
+      // 👇 VALEURS PAR DÉFAUT POUR LES CONDITIONNEMENTS
+      _baseUnitController.text = 'piece';
+      _defaultPackagingQuantityController.text = '1';
+      _unitWeightController.text = '';
+      _unitVolumeController.text = '';
     }
-  }
-
-  // ✅ Parser le conditionnement existant
-  void _parseExistingPackaging(String packaging) {
-    if (packaging.isEmpty) return;
-
-    // Format attendu: "12 carton(s)" ou "4 pack(s)" ou "1.5L bouteille"
-    final regex = RegExp(r'^([\d.]+)\s*(.+)$');
-    final match = regex.firstMatch(packaging);
-
-    if (match != null) {
-      _packagingQuantityController.text = match.group(1) ?? '1';
-      String type = match.group(2) ?? '';
-
-      // Trouver le type correspondant
-      for (var t in _packagingTypes) {
-        if (type.contains(t['suffix'].replaceAll('(s)', ''))) {
-          _selectedPackagingType = t['value'];
-          _packagingController.text = '';
-          return;
-        }
-      }
-    }
-
-    // Si pas de format reconnu, on met dans le champ libre
-    _packagingController.text = packaging;
-  }
-
-  // ✅ Obtenir le texte complet du conditionnement
-  String _getPackagingText() {
-    if (_packagingController.text.isNotEmpty) {
-      return _packagingController.text;
-    }
-
-    final type = _packagingTypes.firstWhere(
-          (t) => t['value'] == _selectedPackagingType,
-      orElse: () => _packagingTypes.first,
-    );
-
-    final quantity = _packagingQuantityController.text.isEmpty
-        ? '1'
-        : _packagingQuantityController.text;
-
-    return '$quantity ${type['suffix']}';
   }
 
   @override
@@ -166,15 +130,21 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
     _descriptionController.dispose();
     _priceController.dispose();
     _packagingController.dispose();
-    _packagingQuantityController.dispose();
     _codeController.dispose();
+    _barcodeController.dispose();
     _promoPriceController.dispose();
     _promoStartController.dispose();
     _promoEndController.dispose();
     _stockQuantityController.dispose();
     _minStockAlertController.dispose();
     _maxStockAlertController.dispose();
+    // 👇 DISPOSE DES NOUVEAUX CONTRÔLEURS
+    _baseUnitController.dispose();
+    _defaultPackagingQuantityController.dispose();
+    _unitWeightController.dispose();
+    _unitVolumeController.dispose();
     _newCategoryController.dispose();
+    _barcodeDebounceTimer?.cancel();
     super.dispose();
   }
 
@@ -188,6 +158,131 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
     if (picked != null) {
       controller.text = '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
     }
+  }
+
+  Future<void> _scanBarcode() async {
+    try {
+      final result = await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => Scaffold(
+            appBar: AppBar(
+              title: const Text('Scanner le code-barres'),
+              backgroundColor: Colors.black,
+              foregroundColor: Colors.white,
+            ),
+            body: MobileScanner(
+              controller: MobileScannerController(
+                detectionSpeed: DetectionSpeed.noDuplicates,
+              ),
+              onDetect: (capture) {
+                final barcode = capture.barcodes.first;
+                final code = barcode.rawValue;
+                if (code != null && code.isNotEmpty) {
+                  Navigator.pop(context, code);
+                }
+              },
+            ),
+          ),
+        ),
+      );
+
+      if (result != null && result.toString().isNotEmpty) {
+        setState(() {
+          _barcodeController.text = result.toString();
+          _barcodeExists = null;
+        });
+        _checkBarcodeUniqueness(result.toString());
+      }
+    } catch (e) {
+      print('Erreur scan: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Erreur lors du scan'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _generateBarcode() {
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final random = timestamp % 10000;
+
+    final supplierId = widget.product?.supplierId ??
+        Provider.of<AuthService>(context, listen: false).currentUser?.id ?? 1;
+    final supplierCode = supplierId.toString().padLeft(5, '0');
+    final productCode = random.toString().padLeft(4, '0');
+    final baseCode = '590$supplierCode$productCode';
+    final checksum = _calculateEAN13Checksum(baseCode);
+    final barcode = '$baseCode$checksum';
+
+    setState(() {
+      _barcodeController.text = barcode;
+      _barcodeExists = null;
+    });
+    _checkBarcodeUniqueness(barcode);
+  }
+
+  int _calculateEAN13Checksum(String code) {
+    if (code.length != 12) return 0;
+    int sum = 0;
+    for (int i = 0; i < code.length; i++) {
+      int digit = int.parse(code[i]);
+      if (i % 2 == 0) {
+        sum += digit * 1;
+      } else {
+        sum += digit * 3;
+      }
+    }
+    return (10 - (sum % 10)) % 10;
+  }
+
+  bool _validateEAN13(String barcode) {
+    if (barcode.length != 13) return true;
+    final code = barcode.substring(0, 12);
+    final providedChecksum = int.parse(barcode[12]);
+    final calculatedChecksum = _calculateEAN13Checksum(code);
+    return providedChecksum == calculatedChecksum;
+  }
+
+  Future<void> _checkBarcodeUniqueness(String barcode) async {
+    if (barcode.length != 13) return;
+    if (!_validateEAN13(barcode)) return;
+
+    _barcodeDebounce?.cancel();
+    _barcodeDebounce = Timer(const Duration(milliseconds: 500), () async {
+      final authService = Provider.of<AuthService>(context, listen: false);
+      final token = authService.token;
+
+      try {
+        final response = await http.get(
+          Uri.parse('${AppConstants.baseUrl}/products/check-barcode/$barcode'),
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+          },
+        );
+
+        final data = json.decode(response.body);
+
+        if (mounted) {
+          setState(() {
+            if (widget.product != null && data['product_id'] == widget.product!.id) {
+              _barcodeExists = false;
+            } else if (data['exists'] && data['supplier_id'] == widget.product?.supplierId) {
+              _barcodeExists = true;
+            } else {
+              _barcodeExists = false;
+            }
+          });
+        }
+      } catch (e) {
+        print('Erreur vérification code-barres: $e');
+      }
+    });
   }
 
   Future<void> _showImageSourceBottomSheet() {
@@ -259,7 +354,6 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
       }
     } else {
       bool granted = false;
-
       if (Platform.isAndroid) {
         if (await Permission.storage.request().isGranted) {
           granted = true;
@@ -269,7 +363,6 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
       } else {
         granted = await Permission.photos.request().isGranted;
       }
-
       if (granted) {
         _pickImage(source);
       } else {
@@ -447,17 +540,28 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
     int minStockAlert = int.tryParse(_minStockAlertController.text) ?? 5;
     int maxStockAlert = int.tryParse(_maxStockAlertController.text) ?? 100;
 
+    // 👇 DONNÉES DE CONDITIONNEMENT
+    int defaultPackagingQuantity = int.tryParse(_defaultPackagingQuantityController.text) ?? 1;
+    double? unitWeight = _unitWeightController.text.isNotEmpty ? double.tryParse(_unitWeightController.text) : null;
+    double? unitVolume = _unitVolumeController.text.isNotEmpty ? double.tryParse(_unitVolumeController.text) : null;
+
     final productData = {
       'name': _nameController.text,
       'description': _descriptionController.text.isEmpty ? null : _descriptionController.text,
       'list_price': double.parse(_priceController.text),
-      'packaging': _getPackagingText(), // ✅ Utilisation du nouveau format
+      'packaging': _packagingController.text.isEmpty ? null : _packagingController.text,
       'is_promotion': _isPromotion ? 1 : 0,
       'categ_id': _selectedCategoryId,
       'default_code': _codeController.text.isEmpty ? null : _codeController.text,
+      'barcode': _barcodeController.text.isEmpty ? null : _barcodeController.text,
       'stock_quantity': stockQuantity,
       'min_stock_alert': minStockAlert,
       'max_stock_alert': maxStockAlert,
+      // 👇 AJOUT DES DONNÉES DE CONDITIONNEMENT
+      'base_unit': _baseUnitController.text,
+      'default_packaging_quantity': defaultPackagingQuantity,
+      'unit_weight': unitWeight,
+      'unit_volume': unitVolume,
     };
 
     if (_isPromotion) {
@@ -514,6 +618,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
   Widget build(BuildContext context) {
     final localizations = AppLocalizations.of(context)!;
     final isArabic = Localizations.localeOf(context).languageCode == 'ar';
+    final authService = Provider.of<AuthService>(context);
 
     return Directionality(
       textDirection: isArabic ? TextDirection.rtl : TextDirection.ltr,
@@ -544,19 +649,6 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Code produit
-                _buildLabel(localizations.productCode),
-                const SizedBox(height: 8),
-                TextFormField(
-                  controller: _codeController,
-                  decoration: InputDecoration(
-                    hintText: localizations.productCodeHint,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
 
                 // Nom du produit
                 _buildLabel('${localizations.products} *'),
@@ -706,109 +798,250 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                // ✅ Conditionnement amélioré
+                // Conditionnement simple
                 _buildLabel(localizations.packaging),
                 const SizedBox(height: 8),
+                TextFormField(
+                  controller: _packagingController,
+                  decoration: InputDecoration(
+                    hintText: localizations.packagingHint,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
 
-                // Choix du type de conditionnement
+                // 👇 NOUVELLE SECTION CONDITIONNEMENTS AVANCÉS
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade50,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.grey.shade300),
+                    color: Colors.orange.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.orange.shade200),
                   ),
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Types prédéfinis
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: _packagingTypes.map((type) {
-                          final isSelected = _selectedPackagingType == type['value'];
-                          return FilterChip(
-                            label: Text(type['label']),
-                            selected: isSelected,
-                            onSelected: (selected) {
-                              setState(() {
-                                _selectedPackagingType = type['value'];
-                                _packagingController.clear();
-                              });
-                            },
-                            selectedColor: AppColors.primary.withOpacity(0.2),
-                            checkmarkColor: AppColors.primary,
-                          );
-                        }).toList(),
+                      Row(
+                        children: [
+                          Icon(Icons.inventory_2, color: Colors.orange.shade700, size: 20),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Conditionnements avancés',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.orange.shade900,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Unité de base
+                      _buildLabel('Unité de base'),
+                      const SizedBox(height: 8),
+                      DropdownButtonFormField<String>(
+                        value: _baseUnitController.text,
+                        decoration: InputDecoration(
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                          filled: true,
+                          fillColor: Colors.white,
+                        ),
+                        items: const [
+                          DropdownMenuItem(value: 'piece', child: Text('Pièce')),
+                          DropdownMenuItem(value: 'kg', child: Text('Kilogramme (kg)')),
+                          DropdownMenuItem(value: 'g', child: Text('Gramme (g)')),
+                          DropdownMenuItem(value: 'liter', child: Text('Litre (L)')),
+                          DropdownMenuItem(value: 'ml', child: Text('Millilitre (ml)')),
+                        ],
+                        onChanged: (value) => setState(() => _baseUnitController.text = value!),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Quantité par défaut
+                      _buildLabel('Quantité par défaut (pièces)'),
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        controller: _defaultPackagingQuantityController,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          hintText: '1',
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                          filled: true,
+                          fillColor: Colors.white,
+                          helperText: 'Nombre d\'unités dans le conditionnement standard',
+                        ),
+                        validator: (value) {
+                          if (value != null && value.isNotEmpty) {
+                            if (int.tryParse(value) == null) {
+                              return 'Nombre valide requis';
+                            }
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Poids unitaire
+                      _buildLabel('Poids unitaire (optionnel)'),
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        controller: _unitWeightController,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          hintText: 'Ex: 0.500',
+                          prefixIcon: const Icon(Icons.fitness_center, size: 20),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                          filled: true,
+                          fillColor: Colors.white,
+                          suffixText: _baseUnitController.text == 'kg' ? 'kg' :
+                          (_baseUnitController.text == 'g' ? 'g' : 'kg'),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Volume unitaire
+                      _buildLabel('Volume unitaire (optionnel)'),
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        controller: _unitVolumeController,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          hintText: 'Ex: 1.5',
+                          prefixIcon: const Icon(Icons.photo_size_select_small, size: 20),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                          filled: true,
+                          fillColor: Colors.white,
+                          suffixText: _baseUnitController.text == 'liter' ? 'L' :
+                          (_baseUnitController.text == 'ml' ? 'ml' : 'L'),
+                        ),
                       ),
 
                       const SizedBox(height: 12),
-
-                      // Quantité pour le type sélectionné
-                      if (_selectedPackagingType != 'unité' || _packagingQuantityController.text.isNotEmpty)
-                        Row(
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.shade100,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
                           children: [
-                            Expanded(
-                              flex: 2,
-                              child: TextFormField(
-                                controller: _packagingQuantityController,
-                                keyboardType: TextInputType.number,
-                                decoration: InputDecoration(
-                                  labelText: 'Quantité',
-                                  hintText: '1',
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                ),
-                              ),
-                            ),
+                            Icon(Icons.info_outline, color: Colors.orange.shade700, size: 16),
                             const SizedBox(width: 8),
                             Expanded(
-                              flex: 3,
                               child: Text(
-                                _packagingTypes.firstWhere(
-                                      (t) => t['value'] == _selectedPackagingType,
-                                  orElse: () => _packagingTypes.first,
-                                )['suffix'],
-                                style: const TextStyle(fontSize: 16),
+                                'Vous pourrez ajouter plusieurs conditionnements (carton, palette, pack) après la création du produit.',
+                                style: TextStyle(fontSize: 11, color: Colors.orange.shade800),
                               ),
                             ),
                           ],
                         ),
-
-                      const SizedBox(height: 8),
-
-                      // Ou saisie libre
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextFormField(
-                              controller: _packagingController,
-                              decoration: InputDecoration(
-                                labelText: 'Ou saisie libre',
-                                hintText: 'Ex: 1.5L bouteille, 6 pack',
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                              ),
-                              onChanged: (value) {
-                                if (value.isNotEmpty) {
-                                  setState(() {
-                                    _selectedPackagingType = '';
-                                  });
-                                }
-                              },
-                            ),
-                          ),
-                        ],
                       ),
                     ],
                   ),
                 ),
                 const SizedBox(height: 16),
 
-                // Stock
+                // Code-barres
+                _buildLabel('Code-barres'),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        controller: _barcodeController,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          hintText: 'Entrez le code-barres',
+                          prefixIcon: const Icon(Icons.qr_code),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          filled: true,
+                          fillColor: Colors.white,
+                        ),
+                        validator: (value) {
+                          if (value != null && value.isNotEmpty) {
+                            if (!RegExp(r'^\d+$').hasMatch(value)) {
+                              return 'Le code-barres ne doit contenir que des chiffres';
+                            }
+                            if (value.length == 13 && !_validateEAN13(value)) {
+                              return 'Code-barres EAN-13 invalide';
+                            }
+                          }
+                          return null;
+                        },
+                        onChanged: (value) {
+                          if (value.isNotEmpty) {
+                            _checkBarcodeUniqueness(value);
+                          } else {
+                            setState(() {
+                              _barcodeExists = null;
+                            });
+                          }
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Tooltip(
+                      message: 'Scanner un code-barres',
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: IconButton(
+                          icon: const Icon(Icons.qr_code_scanner, color: AppColors.primary),
+                          onPressed: _scanBarcode,
+                          iconSize: 24,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Tooltip(
+                      message: 'Générer automatiquement (EAN-13)',
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.green.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: IconButton(
+                          icon: const Icon(Icons.auto_awesome, color: Colors.green),
+                          onPressed: _generateBarcode,
+                          iconSize: 24,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                if (_barcodeExists != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4, left: 12),
+                    child: Row(
+                      children: [
+                        Icon(
+                          _barcodeExists == true ? Icons.warning : Icons.check_circle,
+                          size: 14,
+                          color: _barcodeExists == true ? Colors.orange : Colors.green,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          _barcodeExists == true
+                              ? 'Ce code-barres est déjà utilisé par un autre produit'
+                              : 'Code-barres disponible',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: _barcodeExists == true ? Colors.orange : Colors.green,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                const SizedBox(height: 16),
+
+                // SECTION STOCK
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
@@ -835,7 +1068,6 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                       ),
                       const SizedBox(height: 16),
 
-                      // Quantité en stock
                       _buildLabel('Quantité en stock *'),
                       const SizedBox(height: 8),
                       TextFormField(
@@ -866,7 +1098,6 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                       ),
                       const SizedBox(height: 16),
 
-                      // Seuil d'alerte minimum
                       _buildLabel('Seuil d\'alerte minimum'),
                       const SizedBox(height: 8),
                       TextFormField(
@@ -893,7 +1124,6 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                       ),
                       const SizedBox(height: 16),
 
-                      // Stock maximum
                       _buildLabel('Stock maximum'),
                       const SizedBox(height: 8),
                       TextFormField(
@@ -920,7 +1150,6 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
 
                       const SizedBox(height: 16),
 
-                      // Indicateur de stock
                       Consumer<ProductService>(
                         builder: (context, productService, child) {
                           final stockStatus = _getStockStatus();
@@ -1003,7 +1232,6 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
 
                 if (_isPromotion) ...[
                   const SizedBox(height: 16),
-                  // Prix promotionnel
                   _buildLabel(localizations.promotionPrice),
                   const SizedBox(height: 8),
                   TextFormField(
@@ -1034,7 +1262,6 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Date début promotion
                   _buildLabel(localizations.promotionStart),
                   const SizedBox(height: 8),
                   TextFormField(
@@ -1057,7 +1284,6 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Date fin promotion
                   _buildLabel(localizations.promotionEnd),
                   const SizedBox(height: 8),
                   TextFormField(

@@ -1,6 +1,7 @@
 // lib/models/order.dart
 import 'order_item.dart';
 import 'package:flutter/material.dart';
+// lib/models/order.dart
 
 class Order {
   final int id;
@@ -26,6 +27,8 @@ class Order {
   final String? customerCompanyName;
   final String? customerEmail;
   final String? customerPhone;
+  final int? supplierId;
+  final String? supplierName;
 
   Order({
     required this.id,
@@ -49,11 +52,19 @@ class Order {
     this.customerCompanyName,
     this.customerEmail,
     this.customerPhone,
+    this.supplierId,
+    this.supplierName,
   });
 
+
   factory Order.fromJson(Map<String, dynamic> json) {
-    // Extraire les données du client
     Map<String, dynamic>? customerData = json['customer'];
+
+    // ✅ CORRECTION: Vérifier si supplier existe et n'est pas null
+    Map<String, dynamic>? supplierData;
+    if (json['supplier'] != null && json['supplier'] is Map<String, dynamic>) {
+      supplierData = json['supplier'] as Map<String, dynamic>;
+    }
 
     return Order(
       id: json['id'] as int,
@@ -81,6 +92,11 @@ class Order {
       customerCompanyName: customerData?['company_name'] as String?,
       customerEmail: customerData?['email'] as String?,
       customerPhone: customerData?['phone'] as String?,
+      // ✅ CORRECTION: Gérer le cas où supplierData est null
+      supplierId: supplierData?['id'] as int?,
+      supplierName: supplierData != null
+          ? (supplierData['company_name'] as String? ?? supplierData['name'] as String?)
+          : null,
     );
   }
 
@@ -141,7 +157,6 @@ class Order {
 
   bool get isPaid => paymentStatus == 'paid';
   double get amountTotal => total;
-  String? get supplierName => null;
 
   // Nom du client à afficher
   String get customerDisplayName {

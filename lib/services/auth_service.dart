@@ -8,6 +8,7 @@ import '../utils/constants.dart';
 import 'cart_service.dart';
 import 'order_service.dart';
 import 'dashboard_service.dart';
+import 'notification_service.dart';
 
 class AuthService extends ChangeNotifier {
   User? _currentUser;
@@ -19,6 +20,7 @@ class AuthService extends ChangeNotifier {
   CartService? _cartService;
   OrderService? _orderService;
   DashboardService? _dashboardService;
+  NotificationService? _notificationService;
 
   User? get currentUser => _currentUser;
   String? get token => _token;
@@ -36,6 +38,10 @@ class AuthService extends ChangeNotifier {
 
   void setDashboardService(DashboardService dashboardService) {
     _dashboardService = dashboardService;
+  }
+
+  void setNotificationService(NotificationService notificationService) {
+    _notificationService = notificationService;
   }
 
   Map<String, String> get _headers => {
@@ -108,6 +114,12 @@ class AuthService extends ChangeNotifier {
           print('🔄 Rechargement du dashboard après login...');
           await _dashboardService!.loadDashboardData();
         }
+        if (_notificationService != null) {
+          print('🔔 Chargement des notifications après login...');
+          await _notificationService!.loadNotifications(reset: true);
+          _notificationService!.startListening();
+        }
+
 
         _setLoading(false);
         return true;
@@ -232,6 +244,13 @@ class AuthService extends ChangeNotifier {
           }
           await _cartService!.loadCart();
         }
+
+        if (_notificationService != null) {
+          print('🔔 Chargement des notifications après inscription...');
+          await _notificationService!.loadNotifications(reset: true);
+          _notificationService!.startListening();
+        }
+
 
         _setLoading(false);
         return {'success': true, 'message': data['message']};
@@ -457,6 +476,11 @@ class AuthService extends ChangeNotifier {
       if (_dashboardService != null) {
         // Optionnel: réinitialiser le dashboard
       }
+      if (_notificationService != null) {
+        _notificationService!.clearLocalNotifications();
+        print('✅ Notifications locales vidées');
+      }
+
 
       _setLoading(false);
       print('🎉 Déconnexion complète réussie');
@@ -470,6 +494,8 @@ class AuthService extends ChangeNotifier {
       notifyListeners();
     }
   }
+
+
 
   Future<void> _saveAuthData(Map<String, dynamic> data) async {
     _token = data['access_token'];

@@ -500,4 +500,143 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get soonOut => 'سينفذ قريباً';
+
+  @override
+  String get invoices => 'Mes factures';
+
+  @override
+  String get invoice => 'Facture';
+
+  @override
+  String get invoice_number => 'N° Facture';
+
+  @override
+  String get invoice_date => 'Date';
+
+  @override
+  String get invoice_total => 'Total';
+
+  @override
+  String get invoice_status => 'Statut';
+
+  @override
+  String get invoice_paid => 'Payée';
+
+  @override
+  String get invoice_pending => 'En attente';
+
+  @override
+  String get invoice_download => 'Télécharger';
+
+  @override
+  String get invoice_details => 'Détails';
+
+  @override
+  String get invoice_customer => 'Client';
+
+  @override
+  String get invoice_company => 'Société';
+
+  @override
+  String get invoice_email => 'Email';
+
+  @override
+  String get invoice_phone => 'Téléphone';
+
+  @override
+  String get invoice_address => 'Adresse';
+
+  @override
+  String get invoice_city => 'Ville';
+
+  @override
+  String get invoice_zip => 'Code postal';
+
+  @override
+  String get invoice_items => 'Articles';
+
+  @override
+  String get invoice_quantity => 'Qté';
+
+  @override
+  String get invoice_price => 'Prix';
+
+  @override
+  String get invoice_subtotal => 'Sous-total';
+
+  @override
+  String get invoice_tax => 'TVA (20%)';
+
+  @override
+  String get invoice_shipping => 'Livraison';
+
+  @override
+  String get invoice_grand_total => 'Total TTC';
+
+  @override
+  String get invoice_payment_method => 'Mode de paiement';
+
+  @override
+  String get invoice_cash => 'Espèces';
+
+  @override
+  String get invoice_card => 'Carte';
+
+  @override
+  String get invoice_no_invoices => 'Aucune facture';
+
+  @override
+  String get invoice_no_invoices_desc =>
+      'Vos factures apparaîtront ici après vos achats';
+
+  @override
+  String get due_date => 'Date d\'échéance';
+
+  @override
+  String get billed_to => 'Facturé à';
+
+  @override
+  String get customer => 'Client';
+
+  @override
+  String get zip_code => 'Code postal';
+
+  @override
+  String get items => 'Articles';
+
+  @override
+  String get product => 'Produit';
+
+  @override
+  String get reference => 'Référence';
+
+  @override
+  String get unit_price => 'Prix unitaire';
+
+  @override
+  String get payment_method => 'Mode de paiement';
+
+  @override
+  String get payment_status => 'Statut';
+
+  @override
+  String get download_pdf => 'Télécharger PDF';
+
+  @override
+  String get share_pdf => 'Partager';
+
+  @override
+  String get no_invoices => 'Aucune facture';
+
+  @override
+  String get total_invoiced => 'Total facturé';
+
+  @override
+  String get filter_all => 'Toutes';
+
+  @override
+  String get filter_this_month => 'Ce mois';
+
+  @override
+  String get filter_last_month => 'Mois dernier';
 }

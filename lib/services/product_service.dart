@@ -378,6 +378,103 @@ class ProductService extends ChangeNotifier {
     }
   }
 
+
+  Future<Map<String, dynamic>> addPackaging(int productId, Map<String, dynamic> packagingData) async {
+    _setLoading(true);
+    _clearError();
+
+    try {
+      final response = await http.post(
+        Uri.parse('${AppConstants.baseUrl}/supplier/products/$productId/packagings'),
+        headers: _headers,
+        body: json.encode(packagingData),
+      );
+
+      final data = json.decode(response.body);
+
+      if (response.statusCode == 201 && data['success']) {
+        return {'success': true, 'data': data['data']};
+      } else {
+        return {
+          'success': false,
+          'errors': data['errors'] ?? {'general': [data['message'] ?? 'Erreur']}
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'errors': {'general': ['Erreur réseau: ${e.toString()}']}
+      };
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  Future<List<dynamic>> getProductPackagings(int productId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('${AppConstants.baseUrl}/supplier/products/$productId/packagings'),
+        headers: _headers,
+      );
+
+      final data = json.decode(response.body);
+
+      if (response.statusCode == 200 && data['success']) {
+        return data['data']['packagings'] ?? [];
+      }
+      return [];
+    } catch (e) {
+      print('Erreur chargement conditionnements: $e');
+      return [];
+    }
+  }
+
+  Future<Map<String, dynamic>> updatePackaging(int productId, int packagingId, Map<String, dynamic> packagingData) async {
+    _setLoading(true);
+
+    try {
+      final response = await http.put(
+        Uri.parse('${AppConstants.baseUrl}/supplier/products/$productId/packagings/$packagingId'),
+        headers: _headers,
+        body: json.encode(packagingData),
+      );
+
+      final data = json.decode(response.body);
+
+      if (response.statusCode == 200 && data['success']) {
+        return {'success': true, 'data': data['data']};
+      } else {
+        return {
+          'success': false,
+          'errors': data['errors'] ?? {'general': [data['message'] ?? 'Erreur']}
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'errors': {'general': ['Erreur réseau: ${e.toString()}']}
+      };
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  Future<bool> deletePackaging(int productId, int packagingId) async {
+    try {
+      final response = await http.delete(
+        Uri.parse('${AppConstants.baseUrl}/supplier/products/$productId/packagings/$packagingId'),
+        headers: _headers,
+      );
+
+      final data = json.decode(response.body);
+      return response.statusCode == 200 && data['success'];
+    } catch (e) {
+      print('Erreur suppression conditionnement: $e');
+      return false;
+    }
+  }
+
+
   void _setLoading(bool loading) {
     _isLoading = loading;
     notifyListeners();

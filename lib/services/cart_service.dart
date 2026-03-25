@@ -42,6 +42,8 @@ class CartService extends ChangeNotifier {
     _sessionId = sessionId;
   }
 
+
+
   Map<String, String> get _headers {
     final headers = {
       'Content-Type': 'application/json',
@@ -165,11 +167,11 @@ class CartService extends ChangeNotifier {
   }
 
   // ✅ CHARGER LE PANIER DEPUIS L'API
+
   Future<void> loadCart() async {
     print('🔄 ===== CHARGEMENT DU PANIER =====');
     print('📤 Session ID: $_sessionId');
     print('📤 Token: ${_authService.token}');
-    print('📤 Headers: $_headers');
 
     _setLoading(true);
     _clearError();
@@ -197,6 +199,13 @@ class CartService extends ChangeNotifier {
         _items = (cartData['items'] as List).map((itemJson) {
           return CartItem.fromJson(itemJson);
         }).toList();
+
+        // Afficher les détails des conditionnements
+        for (var item in _items) {
+          if (item.packagingName != null) {
+            print('   📦 ${item.product.name} - ${item.quantityDisplay} - ${item.totalPrice.toStringAsFixed(2)} MAD');
+          }
+        }
 
         print('✅ Panier chargé: ${_items.length} articles de $supplierCount fournisseur(s)');
         notifyListeners();
@@ -248,7 +257,7 @@ class CartService extends ChangeNotifier {
   }
 
   // ✅ METTRE À JOUR LA QUANTITÉ
-  Future<bool> updateQuantity(int cartItemId, int quantity) async {
+  Future<bool> updateQuantity(int cartItemId, int quantity, {double? priceAtTime}) async {
     if (quantity <= 0) {
       return removeFromCart(cartItemId);
     }
@@ -256,10 +265,17 @@ class CartService extends ChangeNotifier {
     _setLoading(true);
 
     try {
+      final Map<String, dynamic> body = {'quantity': quantity};
+
+      // 👈 SI UN PRIX EST FOURNI, L'AJOUTER À LA REQUÊTE
+      if (priceAtTime != null) {
+        body['price_at_time'] = priceAtTime;
+      }
+
       final response = await http.put(
         Uri.parse('${AppConstants.baseUrl}/cart/items/$cartItemId'),
         headers: _headers,
-        body: json.encode({'quantity': quantity}),
+        body: json.encode(body),
       );
 
       final data = json.decode(response.body);
@@ -273,6 +289,36 @@ class CartService extends ChangeNotifier {
       return false;
     } finally {
       _setLoading(false);
+    }
+  }
+
+// ✅ INCRÉMENTER AVEC LE BON PRIX
+  void incrementQuantity(int productId) {
+    final index = _items.indexWhere((item) => item.product.id == productId);
+    if (index >= 0) {
+      final item = _items[index];
+      final newQuantity = item.quantity + 1;
+      _items[index].quantity = newQuantity;
+      notifyListeners();
+      // 👈 PASSER LE PRIX EFFECTIF DU CONDITIONNEMENT
+      updateQuantity(item.id, newQuantity, priceAtTime: item.effectivePrice);
+    }
+  }
+
+// ✅ DÉCRÉMENTER AVEC LE BON PRIX
+  void decrementQuantity(int productId) {
+    final index = _items.indexWhere((item) => item.product.id == productId);
+    if (index >= 0) {
+      final item = _items[index];
+      if (item.quantity > 1) {
+        final newQuantity = item.quantity - 1;
+        _items[index].quantity = newQuantity;
+        notifyListeners();
+        // 👈 PASSER LE PRIX EFFECTIF DU CONDITIONNEMENT
+        updateQuantity(item.id, newQuantity, priceAtTime: item.effectivePrice);
+      } else {
+        removeFromCart(item.id);
+      }
     }
   }
 
@@ -325,6 +371,64 @@ class CartService extends ChangeNotifier {
     }
   }
 
+  Future<bool> addToCartWithPackaging(Map<String, dynamic> item) async {
+    final product = item['product'] as Product;
+    final quantity = item['quantity'] as int;
+    final packaging = item['packaging'] as ProductPackaging?;
+    final totalPieces = item['total_pieces'] as int;
+    final unitPrice = item['unit_price'] as double;
+
+    print('🛒 AJOUT AU PANIER AVEC CONDITIONNEMENT');
+    print('   Produit: ${product.name}');
+    print('   Conditionnement: ${packaging?.name ?? "Pièce unitaire"}');
+    print('   Quantité: $quantity');
+    print('   Total pièces: $totalPieces');
+    print('   Prix unitaire: $unitPrice');
+
+    _setLoading(true);
+    _clearError();
+
+    try {
+      final cartItem = {
+        'product_id': product.id,
+        'quantity': quantity,
+        'packaging_id': packaging?.id,
+        'packaging_name': packaging?.name,
+        'packaging_quantity': packaging?.quantity ?? 1,
+        'total_pieces': totalPieces,
+        'unit_price': unitPrice,
+      };
+
+      final response = await http.post(
+        Uri.parse('${AppConstants.baseUrl}/cart/items'),
+        headers: _headers,
+        body: json.encode(cartItem),
+      );
+
+      print('📥 Status: ${response.statusCode}');
+      print('📥 Réponse: ${response.body}');
+
+      final data = json.decode(response.body);
+
+      if (response.statusCode == 200 && data['success']) {
+        if (data['data']['session_id'] != null && _sessionId == null) {
+          await _saveSessionId(data['data']['session_id']);
+        }
+        await loadCart();
+        return true;
+      } else {
+        _setError(data['message'] ?? 'Erreur lors de l\'ajout');
+        return false;
+      }
+    } catch (e) {
+      print('💥 Exception: $e');
+      _setError('Erreur réseau: ${e.toString()}');
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
   // ✅ RÉCAPITULATIF GLOBAL
   Map<String, double> getCheckoutSummary() {
     final subtotal = this.subtotal;
@@ -341,30 +445,6 @@ class CartService extends ChangeNotifier {
     };
   }
 
-  // ✅ MÉTHODES LOCALES POUR MISE À JOUR INSTANTANÉE
-  void incrementQuantity(int productId) {
-    // Trouver l'item par productId (pas par cartItemId)
-    final index = _items.indexWhere((item) => item.product.id == productId);
-    if (index >= 0) {
-      _items[index].quantity++;
-      notifyListeners();
-      // Sauvegarde en base via API
-      updateQuantity(_items[index].id, _items[index].quantity);
-    }
-  }
-
-  void decrementQuantity(int productId) {
-    final index = _items.indexWhere((item) => item.product.id == productId);
-    if (index >= 0) {
-      if (_items[index].quantity > 1) {
-        _items[index].quantity--;
-        notifyListeners();
-        updateQuantity(_items[index].id, _items[index].quantity);
-      } else {
-        removeFromCart(_items[index].id);
-      }
-    }
-  }
 
   bool get isEmpty => _items.isEmpty;
 
