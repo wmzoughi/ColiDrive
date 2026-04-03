@@ -1,11 +1,13 @@
 // lib/services/product_service.dart
+
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:http_parser/http_parser.dart'; // Pour MediaType
+import 'package:http_parser/http_parser.dart';
 import '../models/product.dart';
 import '../models/category.dart';
+import '../models/product_image.dart';
 import '../utils/constants.dart';
 import 'auth_service.dart';
 import '../l10n/app_localizations.dart';
@@ -34,9 +36,9 @@ class ProductService extends ChangeNotifier {
     'Authorization': 'Bearer ${_authService.token}',
   };
 
-  // ===== PRODUITS =====
+  // ==================== PRODUITS ====================
 
-// Pour le commerçant (tous les produits)
+  // Pour le commerçant (tous les produits)
   Future<void> loadProducts({String? search, int? categoryId, bool reset = false}) async {
     if (reset) {
       _products = [];
@@ -84,10 +86,9 @@ class ProductService extends ChangeNotifier {
     }
   }
 
-// ✅ NOUVELLE MÉTHODE POUR LE FOURNISSEUR (ses propres produits)
+  // Pour le fournisseur (ses propres produits)
   Future<void> loadSupplierProducts({String? search, int? categoryId, bool reset = false}) async {
     print('🚀 CHARGEMENT DES PRODUITS FOURNISSEUR');
-    print('👤 User ID: ${_authService.currentUser?.id}');
 
     if (reset) {
       _products = [];
@@ -102,6 +103,14 @@ class ProductService extends ChangeNotifier {
 
     try {
       String url = '${AppConstants.baseUrl}/supplier/products?page=$_currentPage&per_page=20';
+
+      if (search != null && search.isNotEmpty) {
+        url += '&search=$search';
+      }
+      if (categoryId != null) {
+        url += '&categ_id=$categoryId';
+      }
+
       print('🔍 URL: $url');
 
       final response = await http.get(
@@ -110,7 +119,6 @@ class ProductService extends ChangeNotifier {
       );
 
       print('📥 Status: ${response.statusCode}');
-      print('📥 Réponse: ${response.body}');
 
       final data = json.decode(response.body);
 
@@ -135,6 +143,7 @@ class ProductService extends ChangeNotifier {
       _setLoading(false);
     }
   }
+
   Future<List<Product>> getProductsBySupplier(int supplierId, {int page = 1}) async {
     try {
       final response = await http.get(
@@ -153,11 +162,6 @@ class ProductService extends ChangeNotifier {
     }
   }
 
-  String formatMAD(double amount, BuildContext context) {
-    final localizations = AppLocalizations.of(context)!;
-    // Format: 1.234,56 MAD ou ١٬٢٣٤٫٥٦ درهم
-    return '${amount.toStringAsFixed(2).replaceAll('.', ',')} ${localizations.currency}';
-  }
   Future<Product?> getProduct(int id) async {
     try {
       final response = await http.get(
@@ -184,8 +188,6 @@ class ProductService extends ChangeNotifier {
     try {
       print('🚀 DÉBUT addProduct');
       print('📤 URL: ${AppConstants.baseUrl}/supplier/products');
-      print('📤 Headers: $_headers');
-      print('📤 Données envoyées: ${json.encode(productData)}');
 
       final response = await http.post(
         Uri.parse('${AppConstants.baseUrl}/supplier/products'),
@@ -194,7 +196,7 @@ class ProductService extends ChangeNotifier {
       );
 
       print('📥 Status code: ${response.statusCode}');
-      print('📥 Réponse brute: ${response.body}');
+      print('📥 Réponse: ${response.body}');
 
       final data = json.decode(response.body);
 
@@ -202,11 +204,10 @@ class ProductService extends ChangeNotifier {
         print('✅ Succès !');
         _products = [];
         _currentPage = 1;
-        await loadProducts();
+        await loadSupplierProducts();
         return {'success': true, 'product': Product.fromJson(data['data'])};
       } else {
         print('❌ Échec: ${data['message']}');
-        print('❌ Erreurs: ${data['errors']}');
         return {
           'success': false,
           'errors': data['errors'] ?? {'general': [data['message'] ?? 'Erreur']}
@@ -237,7 +238,6 @@ class ProductService extends ChangeNotifier {
       final data = json.decode(response.body);
 
       if (response.statusCode == 200 && data['success']) {
-        // Mettre à jour dans la liste locale
         final index = _products.indexWhere((p) => p.id == id);
         if (index != -1) {
           _products[index] = Product.fromJson(data['data']);
@@ -281,7 +281,56 @@ class ProductService extends ChangeNotifier {
     }
   }
 
-  // ===== CATÉGORIES =====
+  // ==================== IMAGES ====================
+
+  Future<Map<String, dynamic>> uploadProductImage(int productId, File imageFile) async {
+    _setLoading(true);
+
+    try {
+      print('📤 Uploading image for product $productId');
+
+      var uri = Uri.parse('${AppConstants.baseUrl}/supplier/products/$productId/images/single');
+      var request = http.MultipartRequest('POST', uri);
+
+      if (!await imageFile.exists()) {
+        return {'success': false, 'message': 'Fichier introuvable'};
+      }
+
+      final extension = imageFile.path.split('.').last.toLowerCase();
+      final mimeType = extension == 'png' ? 'png' : 'jpeg';
+
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'image',
+          imageFile.path,
+          contentType: MediaType('image', mimeType),
+        ),
+      );
+
+      request.headers['Authorization'] = 'Bearer ${_authService.token}';
+      request.headers['Accept'] = 'application/json';
+
+      var response = await request.send();
+      var responseData = await http.Response.fromStream(response);
+      var data = json.decode(responseData.body);
+
+      print('📥 Status: ${response.statusCode}');
+      print('📥 Response: ${responseData.body}');
+
+      if (response.statusCode == 201 && data['success']) {
+        return {'success': true, 'image': data['data']};
+      } else {
+        return {'success': false, 'message': data['message'] ?? 'Erreur'};
+      }
+    } catch (e) {
+      print('❌ Error: $e');
+      return {'success': false, 'message': e.toString()};
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // ==================== CATÉGORIES ====================
 
   Future<void> loadCategories() async {
     try {
@@ -314,7 +363,7 @@ class ProductService extends ChangeNotifier {
       final data = json.decode(response.body);
 
       if (response.statusCode == 201 && data['success']) {
-        await loadCategories(); // Recharger les catégories
+        await loadCategories();
         return {'success': true, 'category': data['data']};
       } else {
         return {
@@ -330,54 +379,7 @@ class ProductService extends ChangeNotifier {
     }
   }
 
-  // lib/services/product_service.dart
-
-  Future<Map<String, dynamic>> uploadProductImage(int productId, File imageFile) async {
-    _setLoading(true);
-
-    try {
-      print('📤 Uploading image for product $productId');
-
-      var uri = Uri.parse('${AppConstants.baseUrl}/supplier/products/$productId/image');
-      var request = http.MultipartRequest('POST', uri);
-
-      // 👉 Vérifie que le fichier existe
-      if (!await imageFile.exists()) {
-        return {'success': false, 'message': 'Fichier introuvable'};
-      }
-
-      // 👉 Ajoute l'image avec la clé 'image' (important)
-      request.files.add(
-        await http.MultipartFile.fromPath(
-          'image',  // Cette clé doit correspondre à ce que Laravel attend
-          imageFile.path,
-        ),
-      );
-
-      // 👉 Ajoute le token
-      request.headers['Authorization'] = 'Bearer ${_authService.token}';
-      request.headers['Accept'] = 'application/json';
-
-      var response = await request.send();
-      var responseData = await http.Response.fromStream(response);
-      var data = json.decode(responseData.body);
-
-      print('📥 Status: ${response.statusCode}');
-      print('📥 Response: ${responseData.body}');
-
-      if (response.statusCode == 200) {
-        return {'success': true, 'image_url': data['data']['image_url']};
-      } else {
-        return {'success': false, 'message': data['message'] ?? 'Erreur'};
-      }
-    } catch (e) {
-      print('❌ Error: $e');
-      return {'success': false, 'message': e.toString()};
-    } finally {
-      _setLoading(false);
-    }
-  }
-
+  // ==================== CONDITIONNEMENTS ====================
 
   Future<Map<String, dynamic>> addPackaging(int productId, Map<String, dynamic> packagingData) async {
     _setLoading(true);
@@ -474,6 +476,12 @@ class ProductService extends ChangeNotifier {
     }
   }
 
+  // ==================== UTILITAIRES ====================
+
+  String formatMAD(double amount, BuildContext context) {
+    final localizations = AppLocalizations.of(context)!;
+    return '${amount.toStringAsFixed(2).replaceAll('.', ',')} ${localizations.currency}';
+  }
 
   void _setLoading(bool loading) {
     _isLoading = loading;

@@ -8,7 +8,6 @@ import '../../widgets/bottom_nav_bar.dart';
 import '../../widgets/product_image.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/order.dart';
-import '../../l10n/app_localizations.dart';
 import '../../widgets/notification_icon.dart';
 
 class OrdersScreen extends StatefulWidget {
@@ -37,7 +36,10 @@ class _OrdersScreenState extends State<OrdersScreen> {
           localizations.filterAll,
           localizations.filterPending,
           localizations.filterConfirmed,
+          localizations.filterPreparing,
+          localizations.filterDelivering,
           localizations.filterDelivered,
+          localizations.filterCancelled,
         ];
         _selectedFilter = localizations.filterAll;
       });
@@ -57,8 +59,14 @@ class _OrdersScreenState extends State<OrdersScreen> {
         status = 'pending';
       } else if (_selectedFilter == localizations.filterConfirmed) {
         status = 'confirmed';
+      } else if (_selectedFilter == localizations.filterPreparing) {
+        status = 'preparing';
+      } else if (_selectedFilter == localizations.filterDelivering) {
+        status = 'delivering';
       } else if (_selectedFilter == localizations.filterDelivered) {
         status = 'delivered';
+      } else if (_selectedFilter == localizations.filterCancelled) {
+        status = 'cancelled';
       }
 
       _orders = await merchantService.getOrders(status: status);
@@ -79,7 +87,10 @@ class _OrdersScreenState extends State<OrdersScreen> {
         localizations.filterAll,
         localizations.filterPending,
         localizations.filterConfirmed,
+        localizations.filterPreparing,
+        localizations.filterDelivering,
         localizations.filterDelivered,
+        localizations.filterCancelled,
       ];
     }
     if (_selectedFilter.isEmpty) {
@@ -95,7 +106,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
           children: [
             Image.asset(
               'assets/icons/logo.png',
-              width: 150, // 👈 TAILLE RÉDUITE
+              width: 150,
               height: 150,
               fit: BoxFit.contain,
               errorBuilder: (context, error, stackTrace) {
@@ -123,8 +134,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
           ],
         ),
         actions: [
-          NotificationIcon(color: const Color(0xFF2D3A4F)), // 👈 AJOUTEZ ICI
-
+          NotificationIcon(color: const Color(0xFF2D3A4F)),
         ],
       ),
       body: Column(
@@ -185,7 +195,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
               itemCount: _orders.length,
               itemBuilder: (context, index) {
                 final order = _orders[index];
-                return _buildOrderCard(order);
+                return _buildOrderCard(order, localizations);
               },
             ),
           ),
@@ -210,11 +220,34 @@ class _OrdersScreenState extends State<OrdersScreen> {
     );
   }
 
-  // lib/screens/commercant/orders_screen.dart
-
-  Widget _buildOrderCard(Order order) {
-    final localizations = AppLocalizations.of(context)!;
+  Widget _buildOrderCard(Order order, AppLocalizations localizations) {
     final isArabic = Localizations.localeOf(context).languageCode == 'ar';
+
+    // Fonction pour obtenir la couleur du statut
+    Color getStatusColor(String status) {
+      switch (status) {
+        case 'pending': return Colors.orange;
+        case 'confirmed': return Colors.blue;
+        case 'preparing': return Colors.purple;
+        case 'delivering': return Colors.indigo;
+        case 'delivered': return Colors.green;
+        case 'cancelled': return Colors.red;
+        default: return Colors.grey;
+      }
+    }
+
+    // Fonction pour obtenir le libellé du statut traduit
+    String getStatusLabel(String status, AppLocalizations localizations) {
+      switch (status) {
+        case 'pending': return localizations.pending;
+        case 'confirmed': return localizations.confirmed;
+        case 'preparing': return localizations.preparing;
+        case 'delivering': return localizations.delivering;
+        case 'delivered': return localizations.delivered;
+        case 'cancelled': return localizations.cancelled;
+        default: return status;
+      }
+    }
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -265,22 +298,14 @@ class _OrdersScreenState extends State<OrdersScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: order.status == 'pending'
-                      ? Colors.orange.withOpacity(0.1)
-                      : order.status == 'delivered'
-                      ? Colors.green.withOpacity(0.1)
-                      : Colors.blue.withOpacity(0.1),
+                  color: getStatusColor(order.status).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  order.statusLabel,
+                  getStatusLabel(order.status, localizations),
                   style: TextStyle(
                     fontSize: 12,
-                    color: order.status == 'pending'
-                        ? Colors.orange
-                        : order.status == 'delivered'
-                        ? Colors.green
-                        : Colors.blue,
+                    color: getStatusColor(order.status),
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -325,16 +350,14 @@ class _OrdersScreenState extends State<OrdersScreen> {
           ),
           const SizedBox(height: 12),
 
-          // ✅ PRODUITS AVEC IMAGES CORRIGÉES
+          // Produits avec images
           ...order.items?.take(2).map((item) {
-            // Récupérer l'URL de l'image depuis le snapshot
             String? imageUrl = item.productSnapshot?['image_url'];
 
             return Padding(
               padding: const EdgeInsets.only(bottom: 8),
               child: Row(
                 children: [
-                  // ✅ Image du produit (priorité à l'URL du snapshot)
                   ClipRRect(
                     borderRadius: BorderRadius.circular(4),
                     child: imageUrl != null && imageUrl.isNotEmpty
@@ -353,7 +376,6 @@ class _OrdersScreenState extends State<OrdersScreen> {
                   ),
                   const SizedBox(width: 8),
 
-                  // Détails du produit
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -379,7 +401,6 @@ class _OrdersScreenState extends State<OrdersScreen> {
                     ),
                   ),
 
-                  // Sous-total
                   Text(
                     '${item.subtotal.toStringAsFixed(2)} ${localizations.currency}',
                     style: const TextStyle(
@@ -393,7 +414,6 @@ class _OrdersScreenState extends State<OrdersScreen> {
             );
           }).toList() ?? [],
 
-          // Message pour les produits supplémentaires
           if ((order.items?.length ?? 0) > 2)
             Padding(
               padding: const EdgeInsets.only(bottom: 8),
@@ -413,7 +433,6 @@ class _OrdersScreenState extends State<OrdersScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Total
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -473,7 +492,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
               else if (order.status == 'confirmed')
                 ElevatedButton(
                   onPressed: () {
-                    // TODO: Implémenter la livraison
+                    // TODO: Implémenter la préparation
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
@@ -483,8 +502,38 @@ class _OrdersScreenState extends State<OrdersScreen> {
                     ),
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   ),
-                  child: Text(localizations.delivered),
-                ),
+                  child: Text(localizations.preparing),
+                )
+              else if (order.status == 'preparing')
+                  ElevatedButton(
+                    onPressed: () {
+                      // TODO: Implémenter la livraison
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    ),
+                    child: Text(localizations.delivering),
+                  )
+                else if (order.status == 'delivering')
+                    ElevatedButton(
+                      onPressed: () {
+                        // TODO: Marquer comme livrée
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      ),
+                      child: Text(localizations.delivered),
+                    ),
             ],
           ),
         ],

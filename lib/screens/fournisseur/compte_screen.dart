@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../services/auth_service.dart';
 import '../../services/dashboard_service.dart';
-import '../../services/product_service.dart';  // 👈 AJOUTEZ POUR LES PRODUITS
+import '../../services/product_service.dart';
 import '../../utils/constants.dart';
 import '../../widgets/bottom_nav_bar.dart';
 import '../../l10n/app_localizations.dart';
@@ -19,7 +19,7 @@ class CompteScreenS extends StatelessWidget {
   Widget build(BuildContext context) {
     final authService = Provider.of<AuthService>(context);
     final dashboardService = Provider.of<DashboardService>(context);
-    final productService = Provider.of<ProductService>(context);  // 👈 AJOUTEZ
+    final productService = Provider.of<ProductService>(context);
     final user = authService.currentUser;
     final localizations = AppLocalizations.of(context)!;
 
@@ -61,7 +61,7 @@ class CompteScreenS extends StatelessWidget {
           child: Column(
             children: [
               // Photo de profil
-              _buildProfileHeader(user),
+              _buildProfileHeader(user, localizations),
 
               const SizedBox(height: 20),
 
@@ -123,7 +123,7 @@ class CompteScreenS extends StatelessWidget {
   }
 
   // ✅ Section photo de profil
-  Widget _buildProfileHeader(User? user) {
+  Widget _buildProfileHeader(User? user, AppLocalizations localizations) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -159,7 +159,7 @@ class CompteScreenS extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            user?.name ?? 'Fournisseur',
+            user?.name ?? localizations.supplier,
             style: const TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
@@ -181,8 +181,8 @@ class CompteScreenS extends StatelessWidget {
               color: AppColors.primary.withOpacity(0.1),
               borderRadius: BorderRadius.circular(20),
             ),
-            child: const Text(
-              'Fournisseur',
+            child: Text(
+              localizations.supplier,
               style: TextStyle(
                 color: AppColors.primary,
                 fontWeight: FontWeight.w600,
@@ -225,19 +225,19 @@ class CompteScreenS extends StatelessWidget {
           _buildInfoRow(
             icon: Icons.person_outline,
             label: localizations.fullName,
-            value: user?.name ?? 'Non renseigné',
+            value: user?.name ?? localizations.notProvided,
           ),
           _buildDivider(),
           _buildInfoRow(
             icon: Icons.email_outlined,
             label: localizations.email,
-            value: user?.email ?? 'Non renseigné',
+            value: user?.email ?? localizations.notProvided,
           ),
           _buildDivider(),
           _buildInfoRow(
             icon: Icons.phone_outlined,
             label: localizations.phone,
-            value: user?.phone ?? 'Non renseigné',
+            value: user?.phone ?? localizations.notProvided,
           ),
         ],
       ),
@@ -274,7 +274,7 @@ class CompteScreenS extends StatelessWidget {
           _buildInfoRow(
             icon: Icons.business_outlined,
             label: localizations.companyName,
-            value: user?.companyName ?? 'Non renseigné',
+            value: user?.companyName ?? localizations.notProvided,
           ),
         ],
       ),
@@ -320,7 +320,7 @@ class CompteScreenS extends StatelessWidget {
                 child: _buildStatItem(
                   icon: Icons.shopping_bag_outlined,
                   value: dashboardService.totalOrders.toString(),
-                  label: 'Total commandes',
+                  label: localizations.totalOrders,
                   color: AppColors.primary,
                 ),
               ),
@@ -344,7 +344,7 @@ class CompteScreenS extends StatelessWidget {
                 child: _buildStatItem(
                   icon: Icons.hourglass_empty,
                   value: dashboardService.pendingOrders.toString(),
-                  label: 'En attente',
+                  label: localizations.pending,
                   color: Colors.orange,
                 ),
               ),
@@ -353,7 +353,7 @@ class CompteScreenS extends StatelessWidget {
                 child: _buildStatItem(
                   icon: Icons.check_circle,
                   value: dashboardService.confirmedOrders.toString(),
-                  label: 'Confirmées',
+                  label: localizations.confirmed,
                   color: Colors.green,
                 ),
               ),
@@ -368,7 +368,7 @@ class CompteScreenS extends StatelessWidget {
                 child: _buildStatItem(
                   icon: Icons.build,
                   value: dashboardService.preparingOrders.toString(),
-                  label: 'En préparation',
+                  label: localizations.preparing,
                   color: Colors.purple,
                 ),
               ),
@@ -377,7 +377,7 @@ class CompteScreenS extends StatelessWidget {
                 child: _buildStatItem(
                   icon: Icons.local_shipping,
                   value: dashboardService.deliveringOrders.toString(),
-                  label: 'En livraison',
+                  label: localizations.delivering,
                   color: Colors.blue,
                 ),
               ),
@@ -392,7 +392,7 @@ class CompteScreenS extends StatelessWidget {
                 child: _buildStatItem(
                   icon: Icons.check_circle,
                   value: dashboardService.deliveredOrders.toString(),
-                  label: 'Livrées',
+                  label: localizations.delivered,
                   color: Colors.teal,
                 ),
               ),
@@ -401,7 +401,7 @@ class CompteScreenS extends StatelessWidget {
                 child: _buildStatItem(
                   icon: Icons.cancel,
                   value: dashboardService.cancelledOrders.toString(),
-                  label: 'Annulées',
+                  label: localizations.cancelled,
                   color: Colors.red,
                 ),
               ),
@@ -426,7 +426,7 @@ class CompteScreenS extends StatelessWidget {
                     Icon(Icons.attach_money, color: Colors.green.shade800),
                     const SizedBox(width: 8),
                     Text(
-                      'Chiffre d\'affaires',
+                      localizations.totalRevenue,
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,

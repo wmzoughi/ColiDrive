@@ -47,16 +47,16 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Nos fournisseurs',
-              style: TextStyle(
+            Text(
+              localizations.ourSuppliers,
+              style: const TextStyle(
                 color: Color(0xFF2D3A4F),
                 fontWeight: FontWeight.bold,
                 fontSize: 20,
               ),
             ),
             Text(
-              '${_suppliers.length} partenaires disponibles',
+              '${_suppliers.length} ${localizations.partnersAvailable}',
               style: TextStyle(
                 fontSize: 12,
                 color: Colors.grey.shade600,
@@ -106,7 +106,7 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
         ),
       )
           : _suppliers.isEmpty
-          ? _buildEmptyState()
+          ? _buildEmptyState(localizations)
           : Column(
         children: [
           // Bannière promotionnelle
@@ -134,9 +134,9 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Découvrez nos fournisseurs',
-                        style: TextStyle(
+                      Text(
+                        localizations.discoverOurSuppliers,
+                        style: const TextStyle(
                           color: Colors.white,
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -144,7 +144,7 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '${_suppliers.length} fournisseurs partenaires',
+                        '${_suppliers.length} ${localizations.supplierPartners}',
                         style: TextStyle(
                           color: Colors.white.withOpacity(0.9),
                           fontSize: 13,
@@ -182,7 +182,7 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
               itemCount: _suppliers.length,
               itemBuilder: (context, index) {
                 final supplier = _suppliers[index];
-                return _buildSupplierCard(supplier, index);
+                return _buildSupplierCard(supplier, index, localizations);
               },
             ),
           ),
@@ -207,7 +207,7 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
     );
   }
 
-  Widget _buildSupplierCard(Map<String, dynamic> supplier, int index) {
+  Widget _buildSupplierCard(Map<String, dynamic> supplier, int index, AppLocalizations localizations) {
     // Couleurs aléatoires mais cohérentes pour les avatars
     final List<Color> colors = [
       Colors.blue,
@@ -303,7 +303,7 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
-                'Voir boutique',
+                localizations.visitShop,
                 style: TextStyle(
                   fontSize: 10,
                   color: AppColors.primary,
@@ -317,7 +317,7 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(AppLocalizations localizations) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -340,7 +340,7 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
 
           // Message
           Text(
-            'Aucun fournisseur disponible',
+            localizations.noSuppliersAvailable,
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -349,7 +349,7 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Les fournisseurs apparaîtront ici\nune fois qu\'ils seront disponibles',
+            localizations.suppliersWillAppearHere,
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 14,
@@ -363,7 +363,7 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
           ElevatedButton.icon(
             onPressed: _loadSuppliers,
             icon: const Icon(Icons.refresh),
-            label: const Text('Rafraîchir'),
+            label: Text(localizations.refresh),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
               foregroundColor: Colors.white,

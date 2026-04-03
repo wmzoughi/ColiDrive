@@ -1,8 +1,10 @@
 // lib/models/product.dart
+
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'product_image.dart';
+import '../utils/constants.dart';
 
-// ==================== CLASSE PRODUCT PACKAGING ====================
 class ProductPackaging {
   final int? id;
   final String name;
@@ -43,29 +45,6 @@ class ProductPackaging {
     );
   }
 
-  Map<String, dynamic> toJson() {
-    return {
-      'name': name,
-      'type': type,
-      'quantity': quantity,
-      'price': price,
-      'weight': weight,
-      'volume': volume,
-      'barcode': barcode,
-      'is_default': isDefault,
-      'sort_order': sortOrder,
-    };
-  }
-
-  String get displayName => '$name (${quantity} pièces)';
-
-  String get formattedPrice {
-    if (price != null) {
-      return '${price!.toStringAsFixed(2)} MAD';
-    }
-    return 'Prix sur demande';
-  }
-
   static double _toDouble(dynamic value) {
     if (value == null) return 0.0;
     if (value is double) return value;
@@ -73,9 +52,11 @@ class ProductPackaging {
     if (value is String) return double.tryParse(value) ?? 0.0;
     return 0.0;
   }
+
+  String get displayName => '$name (${quantity} pièces)';
+  String get formattedPrice => price != null ? '${price!.toStringAsFixed(2)} MAD' : 'Prix sur demande';
 }
 
-// ==================== CLASSE PRODUCT ====================
 class Product {
   final int id;
   final String name;
@@ -100,13 +81,14 @@ class Product {
   final int? stockQuantity;
   final int? minStockAlert;
   final int? maxStockAlert;
-
-  // 👇 NOUVEAUX CHAMPS POUR LES CONDITIONNEMENTS
   final List<ProductPackaging>? packagings;
   final String? baseUnit;
   final int? defaultPackagingQuantity;
   final double? unitWeight;
   final double? unitVolume;
+
+  // 👇 NOUVEAU CHAMP POUR LES IMAGES MULTIPLES
+  final List<ProductImage>? images;
 
   Product({
     required this.id,
@@ -132,13 +114,128 @@ class Product {
     this.stockQuantity,
     this.minStockAlert,
     this.maxStockAlert,
-    // 👇 NOUVEAUX PARAMÈTRES
     this.packagings,
     this.baseUnit,
     this.defaultPackagingQuantity,
     this.unitWeight,
     this.unitVolume,
+    this.images,
   });
+
+  // ==================== ACCESSEURS POUR LES IMAGES ====================
+
+  ProductImage? get primaryImage {
+    if (images == null || images!.isEmpty) return null;
+    return images!.firstWhere(
+          (img) => img.isPrimary,
+      orElse: () => images!.first,
+    );
+  }
+
+  String? get mainImageUrl {
+    if (primaryImage != null) return primaryImage!.fullUrl;
+    if (imageUrl != null && imageUrl!.isNotEmpty) {
+      final baseUrl = AppConstants.baseUrl.replaceFirst('/api', '');
+      if (imageUrl!.startsWith('http')) return imageUrl;
+      if (imageUrl!.startsWith('/storage/')) return '$baseUrl$imageUrl';
+      return '$baseUrl/$imageUrl';
+    }
+    return null;
+  }
+
+  // 👉 CE GETTER EST ESSENTIEL - IL RÉSOUT VOTRE ERREUR
+  List<String> get allImageUrls {
+    if (images != null && images!.isNotEmpty) {
+      return images!.map((img) => img.fullUrl).toList();
+    }
+    if (mainImageUrl != null) return [mainImageUrl!];
+    return [];
+  }
+
+  List<Map<String, dynamic>> get formattedImages {
+    if (images != null && images!.isNotEmpty) {
+      return images!.map((img) => {
+        'id': img.id,
+        'url': img.fullUrl,
+        'is_primary': img.isPrimary,
+        'sort_order': img.sortOrder,
+      }).toList();
+    }
+    return [];
+  }
+
+  bool get hasImages => allImageUrls.isNotEmpty;
+  int get imageCount => allImageUrls.length;
+
+  // ==================== ACCESSEURS PRIX ====================
+
+  double get currentPrice {
+    final now = DateTime.now();
+    if (isPromotion &&
+        promotionStart != null &&
+        promotionEnd != null &&
+        promotionStart!.isBefore(now) &&
+        promotionEnd!.isAfter(now)) {
+      return promotionPrice ?? listPrice;
+    }
+    return listPrice;
+  }
+
+  bool get isInPromotion {
+    final now = DateTime.now();
+    return isPromotion &&
+        promotionStart != null &&
+        promotionEnd != null &&
+        promotionStart!.isBefore(now) &&
+        promotionEnd!.isAfter(now);
+  }
+
+  int get discountPercentage {
+    if (!isInPromotion || promotionPrice == null || promotionPrice! >= listPrice) {
+      return 0;
+    }
+    double discount = ((listPrice - promotionPrice!) / listPrice * 100).roundToDouble();
+    return discount.toInt();
+  }
+
+  double? get oldPrice {
+    return isInPromotion ? listPrice : null;
+  }
+
+  // ==================== ACCESSEURS STOCK ====================
+
+  bool get isInStock {
+    if (stockQuantity == null) return true;
+    return stockQuantity! > 0;
+  }
+
+  bool get isLowStock {
+    if (stockQuantity == null) return false;
+    return stockQuantity! > 0 && stockQuantity! <= (minStockAlert ?? 5);
+  }
+
+  String get stockStatus {
+    if (stockQuantity == null) return 'Inconnu';
+    if (stockQuantity! <= 0) return 'Rupture';
+    if (stockQuantity! <= (minStockAlert ?? 5)) return 'Stock faible';
+    return 'En stock';
+  }
+
+  Color get stockStatusColor {
+    if (stockQuantity == null) return Colors.grey;
+    if (stockQuantity! <= 0) return Colors.red;
+    if (stockQuantity! <= (minStockAlert ?? 5)) return Colors.orange;
+    return Colors.green;
+  }
+
+  IconData get stockStatusIcon {
+    if (stockQuantity == null) return Icons.help_outline;
+    if (stockQuantity! <= 0) return Icons.error;
+    if (stockQuantity! <= (minStockAlert ?? 5)) return Icons.warning;
+    return Icons.check_circle;
+  }
+
+  // ==================== FACTORY FROMJSON ====================
 
   static double _toDouble(dynamic value) {
     if (value == null) return 0.0;
@@ -188,11 +285,19 @@ class Product {
   }
 
   factory Product.fromJson(Map<String, dynamic> json) {
-    // 👇 EXTRAIRE LES CONDITIONNEMENTS
+    // Extraire les conditionnements
     List<ProductPackaging>? packagings;
     if (json['packagings'] != null) {
       packagings = (json['packagings'] as List)
           .map((p) => ProductPackaging.fromJson(p))
+          .toList();
+    }
+
+    // 👇 EXTRAIRE LES IMAGES
+    List<ProductImage>? images;
+    if (json['images'] != null) {
+      images = (json['images'] as List)
+          .map((img) => ProductImage.fromJson(img))
           .toList();
     }
 
@@ -220,85 +325,12 @@ class Product {
       stockQuantity: _toInt(json['stock_quantity']),
       minStockAlert: _toInt(json['min_stock_alert']),
       maxStockAlert: _toInt(json['max_stock_alert']),
-      // 👇 NOUVEAUX CHAMPS
       packagings: packagings,
       baseUnit: json['base_unit'],
       defaultPackagingQuantity: json['default_packaging_quantity'],
       unitWeight: json['unit_weight'] != null ? _toDouble(json['unit_weight']) : null,
       unitVolume: json['unit_volume'] != null ? _toDouble(json['unit_volume']) : null,
+      images: images,
     );
-  }
-
-  // ✅ PRIX ACTUEL (avec promotion si applicable)
-  double get currentPrice {
-    final now = DateTime.now();
-    if (isPromotion &&
-        promotionStart != null &&
-        promotionEnd != null &&
-        promotionStart!.isBefore(now) &&
-        promotionEnd!.isAfter(now)) {
-      return promotionPrice ?? listPrice;
-    }
-    return listPrice;
-  }
-
-  // ✅ VÉRIFIER SI LE PRODUIT EST EN PROMOTION
-  bool get isInPromotion {
-    final now = DateTime.now();
-    return isPromotion &&
-        promotionStart != null &&
-        promotionEnd != null &&
-        promotionStart!.isBefore(now) &&
-        promotionEnd!.isAfter(now);
-  }
-
-  // ✅ POURCENTAGE DE RÉDUCTION
-  int get discountPercentage {
-    if (!isInPromotion || promotionPrice == null || promotionPrice! >= listPrice) {
-      return 0;
-    }
-    double discount = ((listPrice - promotionPrice!) / listPrice * 100).roundToDouble();
-    return discount.toInt();
-  }
-
-  // ✅ ANCIEN PRIX (pour affichage barré)
-  double? get oldPrice {
-    return isInPromotion ? listPrice : null;
-  }
-
-  // ✅ VÉRIFIER SI LE PRODUIT EST EN STOCK
-  bool get isInStock {
-    if (stockQuantity == null) return true;
-    return stockQuantity! > 0;
-  }
-
-  // ✅ VÉRIFIER SI LE STOCK EST FAIBLE
-  bool get isLowStock {
-    if (stockQuantity == null) return false;
-    return stockQuantity! > 0 && stockQuantity! <= (minStockAlert ?? 5);
-  }
-
-  // ✅ STATUT DU STOCK EN TEXTE
-  String get stockStatus {
-    if (stockQuantity == null) return 'Inconnu';
-    if (stockQuantity! <= 0) return 'Rupture';
-    if (stockQuantity! <= (minStockAlert ?? 5)) return 'Stock faible';
-    return 'En stock';
-  }
-
-  // ✅ COULEUR DU STATUT DE STOCK
-  Color get stockStatusColor {
-    if (stockQuantity == null) return Colors.grey;
-    if (stockQuantity! <= 0) return Colors.red;
-    if (stockQuantity! <= (minStockAlert ?? 5)) return Colors.orange;
-    return Colors.green;
-  }
-
-  // ✅ ICÔNE DU STATUT DE STOCK
-  IconData get stockStatusIcon {
-    if (stockQuantity == null) return Icons.help_outline;
-    if (stockQuantity! <= 0) return Icons.error;
-    if (stockQuantity! <= (minStockAlert ?? 5)) return Icons.warning;
-    return Icons.check_circle;
   }
 }

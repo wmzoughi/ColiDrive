@@ -1,147 +1,99 @@
 // lib/widgets/product_image.dart
+
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'dart:typed_data';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../utils/constants.dart';
 
-class ProductImage extends StatefulWidget {
-  final int? productId;           // ← CHANGEZ : rendez-le optionnel (avec ?)
-  final String? imageUrl;          // ← GARDEZ
+class ProductImage extends StatelessWidget {
+  final int? productId;
+  final String? imageUrl;
   final double width;
   final double height;
   final BoxFit fit;
+  final bool useCached;
 
   const ProductImage({
     Key? key,
-    this.productId,                // ← CHANGEZ : plus de "required"
-    this.imageUrl,                 // ← GARDEZ
+    this.productId,
+    this.imageUrl,
     this.width = 100,
     this.height = 100,
     this.fit = BoxFit.cover,
+    this.useCached = true,
   }) : super(key: key);
 
-  @override
-  State<ProductImage> createState() => _ProductImageState();
-}
+  String? _getFullUrl() {
+    final baseUrl = AppConstants.baseUrl.replaceFirst('/api', '');
 
-class _ProductImageState extends State<ProductImage> {
-  Uint8List? _imageBytes;
-  bool _isLoading = false;
-  String? _error;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadImage();
-  }
-
-  Future<void> _loadImage() async {
-    if (_isLoading) return;
-
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
-
-    try {
-      String baseUrl = AppConstants.baseUrl.replaceFirst('/api', '');
-      String fullUrl;
-
-      // ✅ 1. PRIORITÉ à l'URL directe si fournie
-      if (widget.imageUrl != null && widget.imageUrl!.isNotEmpty) {
-        if (widget.imageUrl!.startsWith('http')) {
-          fullUrl = widget.imageUrl!;
-        } else if (widget.imageUrl!.startsWith('/')) {
-          fullUrl = '$baseUrl${widget.imageUrl}';
-        } else {
-          fullUrl = '$baseUrl/${widget.imageUrl}';
-        }
-      }
-      // ✅ 2. SINON, utiliser l'ID du produit
-      else if (widget.productId != null) {
-        fullUrl = '$baseUrl/products/${widget.productId}/image';
-      }
-      // ✅ 3. AUCUNE image
-      else {
-        setState(() {
-          _error = 'Aucune image';
-          _isLoading = false;
-        });
-        return;
-      }
-
-      print('📸 Chargement: $fullUrl');
-
-      final response = await http.get(Uri.parse(fullUrl));
-
-      if (response.statusCode == 200) {
-        setState(() {
-          _imageBytes = response.bodyBytes;
-          _isLoading = false;
-        });
-      } else {
-        setState(() {
-          _error = 'Erreur ${response.statusCode}';
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      print('❌ Erreur chargement: $e');
-      setState(() {
-        _error = e.toString();
-        _isLoading = false;
-      });
+    if (imageUrl != null && imageUrl!.isNotEmpty) {
+      if (imageUrl!.startsWith('http')) return imageUrl;
+      if (imageUrl!.startsWith('/storage/')) return '$baseUrl$imageUrl';
+      return '$baseUrl/$imageUrl';
     }
+
+    if (productId != null) {
+      return '$baseUrl/products/${productId}/image';
+    }
+
+    return null;
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_imageBytes != null) {
-      return Image.memory(
-        _imageBytes!,
-        width: widget.width,
-        height: widget.height,
-        fit: widget.fit,
-        errorBuilder: (context, error, stackTrace) {
-          print('❌ Erreur affichage: $error');
-          return _buildPlaceholder();
-        },
+    final fullUrl = _getFullUrl();
+
+    if (fullUrl == null) {
+      return _buildPlaceholder();
+    }
+
+    if (useCached) {
+      return CachedNetworkImage(
+        imageUrl: fullUrl,
+        width: width,
+        height: height,
+        fit: fit,
+        placeholder: (context, url) => _buildLoading(),
+        errorWidget: (context, url, error) => _buildPlaceholder(),
       );
     }
 
-    if (_isLoading) {
-      return Container(
-        width: widget.width,
-        height: widget.height,
-        color: Colors.grey[200],
-        child: const Center(
-          child: CircularProgressIndicator(),
+    return Image.network(
+      fullUrl,
+      width: width,
+      height: height,
+      fit: fit,
+      loadingBuilder: (context, child, loadingProgress) {
+        if (loadingProgress == null) return child;
+        return _buildLoading();
+      },
+      errorBuilder: (context, error, stackTrace) => _buildPlaceholder(),
+    );
+  }
+
+  Widget _buildLoading() {
+    return Container(
+      width: width,
+      height: height,
+      color: Colors.grey[200],
+      child: const Center(
+        child: SizedBox(
+          width: 24,
+          height: 24,
+          child: CircularProgressIndicator(strokeWidth: 2),
         ),
-      );
-    }
-
-    return _buildPlaceholder();
+      ),
+    );
   }
 
   Widget _buildPlaceholder() {
     return Container(
-      width: widget.width,
-      height: widget.height,
+      width: width,
+      height: height,
       color: Colors.grey[200],
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.image_not_supported, color: Colors.grey.shade400),
-          if (widget.width > 50)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(
-                _error ?? 'Pas d\'image',
-                style: TextStyle(fontSize: 10, color: Colors.grey.shade600),
-                textAlign: TextAlign.center,
-              ),
-            ),
-        ],
+      child: Icon(
+        Icons.image_not_supported,
+        color: Colors.grey[400],
+        size: width * 0.4,
       ),
     );
   }

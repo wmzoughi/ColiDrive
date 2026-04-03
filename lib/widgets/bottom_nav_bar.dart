@@ -74,7 +74,7 @@ class BottomNavBar extends StatelessWidget {
         BottomNavigationBarItem(
           icon: const Icon(Icons.store_outlined),
           activeIcon: const Icon(Icons.store),
-          label: 'Boutiques',
+          label: localizations.shops,
         ),
       );
     }

@@ -1,4 +1,5 @@
 // lib/screens/fournisseur/add_edit_product_screen.dart
+
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -14,6 +15,7 @@ import '../../services/product_service.dart';
 import '../../services/auth_service.dart';
 import '../../utils/constants.dart';
 import '../../widgets/product_image.dart';
+import '../../widgets/product_image_gallery.dart';
 import '../../l10n/app_localizations.dart';
 
 class AddEditProductScreen extends StatefulWidget {
@@ -44,18 +46,17 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
   final _promoStartController = TextEditingController();
   final _promoEndController = TextEditingController();
 
-  // Contrôleurs pour le stock
   final _stockQuantityController = TextEditingController();
   final _minStockAlertController = TextEditingController();
   final _maxStockAlertController = TextEditingController();
 
-  // 👇 NOUVEAUX CONTRÔLEURS POUR LES CONDITIONNEMENTS
   final _baseUnitController = TextEditingController();
   final _defaultPackagingQuantityController = TextEditingController();
   final _unitWeightController = TextEditingController();
   final _unitVolumeController = TextEditingController();
 
-  File? _imageFile;
+  // 👉 CHANGEMENT: List<File> au lieu de File?
+  List<File> _imageFiles = [];
   final picker = ImagePicker();
 
   int? _selectedCategoryId;
@@ -66,8 +67,6 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
   Timer? _barcodeDebounceTimer;
 
   final TextEditingController _newCategoryController = TextEditingController();
-
-  Timer? _barcodeDebounce;
 
   @override
   void initState() {
@@ -94,7 +93,6 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
       _minStockAlertController.text = widget.product!.minStockAlert?.toString() ?? '5';
       _maxStockAlertController.text = widget.product!.maxStockAlert?.toString() ?? '100';
 
-      // 👇 CHARGER LES DONNÉES DE CONDITIONNEMENT
       _baseUnitController.text = widget.product!.baseUnit ?? 'piece';
       _defaultPackagingQuantityController.text = widget.product!.defaultPackagingQuantity?.toString() ?? '1';
       _unitWeightController.text = widget.product!.unitWeight?.toString() ?? '';
@@ -115,12 +113,8 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
       _stockQuantityController.text = '0';
       _minStockAlertController.text = '5';
       _maxStockAlertController.text = '100';
-
-      // 👇 VALEURS PAR DÉFAUT POUR LES CONDITIONNEMENTS
       _baseUnitController.text = 'piece';
       _defaultPackagingQuantityController.text = '1';
-      _unitWeightController.text = '';
-      _unitVolumeController.text = '';
     }
   }
 
@@ -138,7 +132,6 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
     _stockQuantityController.dispose();
     _minStockAlertController.dispose();
     _maxStockAlertController.dispose();
-    // 👇 DISPOSE DES NOUVEAUX CONTRÔLEURS
     _baseUnitController.dispose();
     _defaultPackagingQuantityController.dispose();
     _unitWeightController.dispose();
@@ -210,7 +203,6 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
   void _generateBarcode() {
     final timestamp = DateTime.now().millisecondsSinceEpoch;
     final random = timestamp % 10000;
-
     final supplierId = widget.product?.supplierId ??
         Provider.of<AuthService>(context, listen: false).currentUser?.id ?? 1;
     final supplierCode = supplierId.toString().padLeft(5, '0');
@@ -252,8 +244,8 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
     if (barcode.length != 13) return;
     if (!_validateEAN13(barcode)) return;
 
-    _barcodeDebounce?.cancel();
-    _barcodeDebounce = Timer(const Duration(milliseconds: 500), () async {
+    _barcodeDebounceTimer?.cancel();
+    _barcodeDebounceTimer = Timer(const Duration(milliseconds: 500), () async {
       final authService = Provider.of<AuthService>(context, listen: false);
       final token = authService.token;
 
@@ -285,10 +277,11 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
     });
   }
 
-  Future<void> _showImageSourceBottomSheet() {
+  // 👉 NOUVELLE MÉTHODE: Sélectionner plusieurs images
+  Future<void> _showImageSourceBottomSheet() async {
     final localizations = AppLocalizations.of(context)!;
 
-    return showModalBottomSheet(
+    final result = await showModalBottomSheet<int>(
       context: context,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -313,37 +306,38 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
               ListTile(
                 leading: const Icon(Icons.camera_alt, color: AppColors.primary),
                 title: Text(localizations.takePhoto),
-                onTap: () {
-                  Navigator.pop(context);
-                  _checkPermissionAndPickImage(ImageSource.camera);
-                },
+                onTap: () => Navigator.pop(context, 0),
               ),
               ListTile(
                 leading: const Icon(Icons.photo_library, color: AppColors.primary),
                 title: Text(localizations.chooseFromGallery),
-                onTap: () {
-                  Navigator.pop(context);
-                  _checkPermissionAndPickImage(ImageSource.gallery);
-                },
+                onTap: () => Navigator.pop(context, 1),
               ),
               ListTile(
                 leading: const Icon(Icons.cancel, color: Colors.grey),
                 title: Text(localizations.cancel),
-                onTap: () => Navigator.pop(context),
+                onTap: () => Navigator.pop(context, null),
               ),
             ],
           ),
         );
       },
     );
+
+    if (result == 0) {
+      await _checkPermissionAndPickImages(ImageSource.camera);
+    } else if (result == 1) {
+      await _checkPermissionAndPickImages(ImageSource.gallery);
+    }
   }
 
-  Future<void> _checkPermissionAndPickImage(ImageSource source) async {
+  // 👉 NOUVELLE MÉTHODE: Sélectionner plusieurs images
+  Future<void> _checkPermissionAndPickImages(ImageSource source) async {
     final localizations = AppLocalizations.of(context)!;
 
     if (source == ImageSource.camera) {
       if (await Permission.camera.request().isGranted) {
-        _pickImage(source);
+        await _pickMultipleImages(source);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -364,7 +358,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
         granted = await Permission.photos.request().isGranted;
       }
       if (granted) {
-        _pickImage(source);
+        await _pickMultipleImages(source);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -376,30 +370,50 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
     }
   }
 
-  Future<void> _pickImage(ImageSource source) async {
-    final localizations = AppLocalizations.of(context)!;
-
+  // 👉 NOUVELLE MÉTHODE: Choisir plusieurs images
+  Future<void> _pickMultipleImages(ImageSource source) async {
     try {
-      final pickedFile = await picker.pickImage(
-        source: source,
-        maxWidth: 1024,
-        maxHeight: 1024,
-        imageQuality: 85,
-      );
-
-      if (pickedFile != null) {
-        setState(() {
-          _imageFile = File(pickedFile.path);
-        });
+      if (source == ImageSource.camera) {
+        // Pour la caméra, on ne peut prendre qu'une photo à la fois
+        final pickedFile = await picker.pickImage(
+          source: source,
+          maxWidth: 1024,
+          maxHeight: 1024,
+          imageQuality: 85,
+        );
+        if (pickedFile != null) {
+          setState(() {
+            _imageFiles.add(File(pickedFile.path));
+          });
+        }
+      } else {
+        // Pour la galerie, on peut sélectionner plusieurs images
+        final List<XFile> pickedFiles = await picker.pickMultiImage(
+          maxWidth: 1024,
+          maxHeight: 1024,
+          imageQuality: 85,
+        );
+        if (pickedFiles.isNotEmpty) {
+          setState(() {
+            _imageFiles.addAll(pickedFiles.map((xfile) => File(xfile.path)));
+          });
+        }
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('${localizations.error}: ${e.toString()}'),
+          content: Text('Erreur: ${e.toString()}'),
           backgroundColor: AppColors.error,
         ),
       );
     }
+  }
+
+  // 👉 NOUVELLE MÉTHODE: Supprimer une image de la liste
+  void _removeImage(int index) {
+    setState(() {
+      _imageFiles.removeAt(index);
+    });
   }
 
   Future<void> _addNewCategory() async {
@@ -482,19 +496,27 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
     );
   }
 
-  Future<void> _uploadImage(int productId) async {
-    final localizations = AppLocalizations.of(context)!;
-
-    if (_imageFile == null) return;
+  // 👉 NOUVELLE MÉTHODE: Uploader plusieurs images
+  Future<void> _uploadMultipleImages(int productId) async {
+    if (_imageFiles.isEmpty) return;
 
     final productService = Provider.of<ProductService>(context, listen: false);
-    final result = await productService.uploadProductImage(productId, _imageFile!);
 
-    if (result['success'] && mounted) {
-      await productService.loadSupplierProducts(reset: true);
+    for (int i = 0; i < _imageFiles.length; i++) {
+      final result = await productService.uploadProductImage(productId, _imageFiles[i]);
+      if (result['success'] && mounted) {
+        print('✅ Image ${i + 1} téléchargée avec succès');
+      } else {
+        print('❌ Erreur image ${i + 1}: ${result['message']}');
+      }
+    }
+
+    await productService.loadSupplierProducts(reset: true);
+
+    if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(localizations.imageUploaded),
+          content: Text('${_imageFiles.length} image(s) téléchargée(s) avec succès'),
           backgroundColor: AppColors.success,
         ),
       );
@@ -539,8 +561,6 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
     int stockQuantity = int.tryParse(_stockQuantityController.text) ?? 0;
     int minStockAlert = int.tryParse(_minStockAlertController.text) ?? 5;
     int maxStockAlert = int.tryParse(_maxStockAlertController.text) ?? 100;
-
-    // 👇 DONNÉES DE CONDITIONNEMENT
     int defaultPackagingQuantity = int.tryParse(_defaultPackagingQuantityController.text) ?? 1;
     double? unitWeight = _unitWeightController.text.isNotEmpty ? double.tryParse(_unitWeightController.text) : null;
     double? unitVolume = _unitVolumeController.text.isNotEmpty ? double.tryParse(_unitVolumeController.text) : null;
@@ -557,7 +577,6 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
       'stock_quantity': stockQuantity,
       'min_stock_alert': minStockAlert,
       'max_stock_alert': maxStockAlert,
-      // 👇 AJOUT DES DONNÉES DE CONDITIONNEMENT
       'base_unit': _baseUnitController.text,
       'default_packaging_quantity': defaultPackagingQuantity,
       'unit_weight': unitWeight,
@@ -575,14 +594,14 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
 
     if (widget.product == null) {
       result = await productService.addProduct(productData);
-      if (result['success'] && _imageFile != null && mounted) {
+      if (result['success'] && _imageFiles.isNotEmpty && mounted) {
         final newProductId = result['product'].id;
-        await _uploadImage(newProductId);
+        await _uploadMultipleImages(newProductId);
       }
     } else {
       result = await productService.updateProduct(widget.product!.id, productData);
-      if (result['success'] && _imageFile != null && mounted) {
-        await _uploadImage(widget.product!.id);
+      if (result['success'] && _imageFiles.isNotEmpty && mounted) {
+        await _uploadMultipleImages(widget.product!.id);
       }
     }
 
@@ -618,7 +637,6 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
   Widget build(BuildContext context) {
     final localizations = AppLocalizations.of(context)!;
     final isArabic = Localizations.localeOf(context).languageCode == 'ar';
-    final authService = Provider.of<AuthService>(context);
 
     return Directionality(
       textDirection: isArabic ? TextDirection.rtl : TextDirection.ltr,
@@ -649,7 +667,6 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-
                 // Nom du produit
                 _buildLabel('${localizations.products} *'),
                 const SizedBox(height: 8),
@@ -812,7 +829,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                // 👇 NOUVELLE SECTION CONDITIONNEMENTS AVANCÉS
+                // Section Conditionnements avancés
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
@@ -838,8 +855,6 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                         ],
                       ),
                       const SizedBox(height: 16),
-
-                      // Unité de base
                       _buildLabel('Unité de base'),
                       const SizedBox(height: 8),
                       DropdownButtonFormField<String>(
@@ -859,8 +874,6 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                         onChanged: (value) => setState(() => _baseUnitController.text = value!),
                       ),
                       const SizedBox(height: 16),
-
-                      // Quantité par défaut
                       _buildLabel('Quantité par défaut (pièces)'),
                       const SizedBox(height: 8),
                       TextFormField(
@@ -873,18 +886,8 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                           fillColor: Colors.white,
                           helperText: 'Nombre d\'unités dans le conditionnement standard',
                         ),
-                        validator: (value) {
-                          if (value != null && value.isNotEmpty) {
-                            if (int.tryParse(value) == null) {
-                              return 'Nombre valide requis';
-                            }
-                          }
-                          return null;
-                        },
                       ),
                       const SizedBox(height: 16),
-
-                      // Poids unitaire
                       _buildLabel('Poids unitaire (optionnel)'),
                       const SizedBox(height: 8),
                       TextFormField(
@@ -901,8 +904,6 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                         ),
                       ),
                       const SizedBox(height: 16),
-
-                      // Volume unitaire
                       _buildLabel('Volume unitaire (optionnel)'),
                       const SizedBox(height: 8),
                       TextFormField(
@@ -918,7 +919,6 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                           (_baseUnitController.text == 'ml' ? 'ml' : 'L'),
                         ),
                       ),
-
                       const SizedBox(height: 12),
                       Container(
                         padding: const EdgeInsets.all(12),
@@ -1067,7 +1067,6 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                         ],
                       ),
                       const SizedBox(height: 16),
-
                       _buildLabel('Quantité en stock *'),
                       const SizedBox(height: 8),
                       TextFormField(
@@ -1097,7 +1096,6 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                         onChanged: (_) => setState(() {}),
                       ),
                       const SizedBox(height: 16),
-
                       _buildLabel('Seuil d\'alerte minimum'),
                       const SizedBox(height: 8),
                       TextFormField(
@@ -1113,17 +1111,8 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                           fillColor: Colors.white,
                           helperText: 'En dessous de ce seuil, une alerte sera affichée',
                         ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) return null;
-                          if (int.tryParse(value) == null) {
-                            return 'Veuillez entrer un nombre valide';
-                          }
-                          return null;
-                        },
-                        onChanged: (_) => setState(() {}),
                       ),
                       const SizedBox(height: 16),
-
                       _buildLabel('Stock maximum'),
                       const SizedBox(height: 8),
                       TextFormField(
@@ -1139,21 +1128,11 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                           fillColor: Colors.white,
                           helperText: 'Quantité maximale recommandée',
                         ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) return null;
-                          if (int.tryParse(value) == null) {
-                            return 'Veuillez entrer un nombre valide';
-                          }
-                          return null;
-                        },
                       ),
-
                       const SizedBox(height: 16),
-
                       Consumer<ProductService>(
                         builder: (context, productService, child) {
                           final stockStatus = _getStockStatus();
-
                           return Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
@@ -1261,7 +1240,6 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                     },
                   ),
                   const SizedBox(height: 16),
-
                   _buildLabel(localizations.promotionStart),
                   const SizedBox(height: 8),
                   TextFormField(
@@ -1283,7 +1261,6 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                     },
                   ),
                   const SizedBox(height: 16),
-
                   _buildLabel(localizations.promotionEnd),
                   const SizedBox(height: 8),
                   TextFormField(
@@ -1308,99 +1285,171 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
 
                 const SizedBox(height: 24),
 
-                // Section Image
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade50,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey.shade300),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        localizations.productImage,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF2D3A4F),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Center(
-                        child: Stack(
+                // 👉 SECTION IMAGES MULTIPLES POUR NOUVEAU PRODUIT
+                if (widget.product == null)
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey.shade300),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Container(
-                              width: 150,
-                              height: 150,
-                              decoration: BoxDecoration(
-                                color: Colors.grey.shade200,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: Colors.grey.shade400),
+                            Text(
+                              'Images du produit (${_imageFiles.length})',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF2D3A4F),
                               ),
-                              child: _imageFile != null
-                                  ? ClipRRect(
-                                borderRadius: BorderRadius.circular(12),
-                                child: Image.file(
-                                  _imageFile!,
-                                  fit: BoxFit.cover,
-                                  width: 150,
-                                  height: 150,
-                                ),
-                              )
-                                  : (widget.product?.imageUrl != null
-                                  ? ProductImage(
-                                productId: widget.product!.id,
-                                imageUrl: widget.product!.imageUrl,
-                                width: 150,
-                                height: 150,
-                                fit: BoxFit.cover,
-                              )
-                                  : Icon(
-                                Icons.add_photo_alternate_outlined,
-                                size: 50,
-                                color: Colors.grey,
-                              )),
                             ),
-                            Positioned(
-                              bottom: 5,
-                              right: 5,
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: AppColors.primary,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: IconButton(
-                                  icon: const Icon(Icons.camera_alt, color: Colors.white, size: 20),
-                                  onPressed: _showImageSourceBottomSheet,
-                                  padding: const EdgeInsets.all(8),
-                                  constraints: const BoxConstraints(),
-                                ),
+                            ElevatedButton.icon(
+                              onPressed: _showImageSourceBottomSheet,
+                              icon: const Icon(Icons.add_photo_alternate, size: 18),
+                              label: const Text('Ajouter'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primary,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                minimumSize: const Size(0, 36),
                               ),
                             ),
                           ],
                         ),
-                      ),
-                      if (_imageFile != null)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 8),
-                          child: Center(
-                            child: Text(
-                              '${localizations.selectedImage}: ${_imageFile!.path.split('/').last}',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: Colors.grey.shade600,
-                                fontStyle: FontStyle.italic,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                        const SizedBox(height: 12),
+
+                        if (_imageFiles.isEmpty)
+                          Container(
+                            padding: const EdgeInsets.all(32),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade100,
+                              borderRadius: BorderRadius.circular(12),
                             ),
+                            child: Column(
+                              children: [
+                                Icon(Icons.photo_library, size: 48, color: Colors.grey.shade400),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Aucune image sélectionnée',
+                                  style: TextStyle(color: Colors.grey.shade600),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Ajoutez une ou plusieurs images pour votre produit',
+                                  style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                                ),
+                              ],
+                            ),
+                          )
+                        else
+                          GridView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 3,
+                              crossAxisSpacing: 8,
+                              mainAxisSpacing: 8,
+                              childAspectRatio: 1,
+                            ),
+                            itemCount: _imageFiles.length,
+                            itemBuilder: (context, index) {
+                              final imageFile = _imageFiles[index];
+                              return Stack(
+                                children: [
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: Image.file(
+                                      imageFile,
+                                      width: double.infinity,
+                                      height: double.infinity,
+                                      fit: BoxFit.cover,
+                                    ),
+                                  ),
+                                  if (index == 0)
+                                    Positioned(
+                                      top: 4,
+                                      left: 4,
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: Colors.amber,
+                                          borderRadius: BorderRadius.circular(4),
+                                        ),
+                                        child: const Text(
+                                          'Principale',
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  Positioned(
+                                    top: 4,
+                                    right: 4,
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        color: Colors.black54,
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: IconButton(
+                                        icon: const Icon(Icons.close, size: 16),
+                                        color: Colors.white,
+                                        onPressed: () => _removeImage(index),
+                                        padding: const EdgeInsets.all(4),
+                                        constraints: const BoxConstraints(),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
+
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.info_outline, size: 16, color: Colors.blue.shade700),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'La première image sera automatiquement définie comme image principale.',
+                                  style: TextStyle(fontSize: 11, color: Colors.blue.shade700),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
+
+                // Section Images Multiples pour modification
+                if (widget.product != null)
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey.shade300),
+                    ),
+                    child: ProductImageGallery(
+                      productId: widget.product!.id,
+                      initialImages: widget.product!.images,
+                    ),
+                  ),
 
                 const SizedBox(height: 32),
 

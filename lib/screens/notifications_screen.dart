@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../services/notification_service.dart';
 import '../services/auth_service.dart';
 import '../utils/constants.dart';
+import '../l10n/app_localizations.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({Key? key}) : super(key: key);
@@ -46,22 +47,24 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   Future<void> _deleteNotification(String id) async {
+    final localizations = AppLocalizations.of(context)!;
+
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Supprimer'),
-        content: const Text('Supprimer cette notification ?'),
+        title: Text(localizations.delete),
+        content: Text(localizations.deleteNotificationConfirm),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Annuler'),
+            child: Text(localizations.cancel),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
             ),
-            child: const Text('Supprimer'),
+            child: Text(localizations.delete),
           ),
         ],
       ),
@@ -77,16 +80,17 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   Widget build(BuildContext context) {
     final service = Provider.of<NotificationService>(context);
     final authService = Provider.of<AuthService>(context);
+    final localizations = AppLocalizations.of(context)!;
 
-    // ✅ Déterminer le type d'utilisateur
+    // Déterminer le type d'utilisateur
     final userType = authService.currentUser?.userType;
 
-    // ✅ Filtrer les notifications selon le type d'utilisateur
+    // Filtrer les notifications selon le type d'utilisateur
     final displayNotifications = userType == 'fournisseur'
         ? service.getSupplierNotifications()
         : service.getMerchantNotifications();
 
-    // ✅ Calculer les non lues pour l'affichage
+    // Calculer les non lues pour l'affichage
     final displayUnreadCount = userType == 'fournisseur'
         ? service.getSupplierNotifications().where((n) => !n.isRead).length
         : service.getMerchantNotifications().where((n) => !n.isRead).length;
@@ -96,9 +100,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        title: const Text(
-          'Notifications',
-          style: TextStyle(
+        title: Text(
+          localizations.notifications,
+          style: const TextStyle(
             color: Color(0xFF2D3A4F),
             fontWeight: FontWeight.bold,
           ),
@@ -115,7 +119,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 await service.markAllAsRead();
               },
               child: Text(
-                'Tout marquer comme lu',
+                localizations.markAllAsRead,
                 style: TextStyle(
                   color: AppColors.primary,
                   fontSize: 12,
@@ -131,7 +135,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       body: service.isLoading && service.notifications.isEmpty
           ? const Center(child: CircularProgressIndicator())
           : displayNotifications.isEmpty
-          ? _buildEmptyState(userType)
+          ? _buildEmptyState(userType, localizations)
           : RefreshIndicator(
         onRefresh: () => _loadNotifications(reset: true),
         child: ListView.builder(
@@ -167,19 +171,19 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 return await showDialog(
                   context: context,
                   builder: (context) => AlertDialog(
-                    title: const Text('Supprimer'),
-                    content: const Text('Supprimer cette notification ?'),
+                    title: Text(localizations.delete),
+                    content: Text(localizations.deleteNotificationConfirm),
                     actions: [
                       TextButton(
                         onPressed: () => Navigator.pop(context, false),
-                        child: const Text('Annuler'),
+                        child: Text(localizations.cancel),
                       ),
                       ElevatedButton(
                         onPressed: () => Navigator.pop(context, true),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.red,
                         ),
-                        child: const Text('Supprimer'),
+                        child: Text(localizations.delete),
                       ),
                     ],
                   ),
@@ -286,7 +290,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                                   child: Text(
-                                    'Commande: ${notification.data['order_number']}',
+                                    '${localizations.order}: ${notification.data['order_number']}',
                                     style: TextStyle(
                                       fontSize: 12,
                                       color: Colors.grey.shade700,
@@ -307,7 +311,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                                   child: Text(
-                                    'Produit: ${notification.data['product_name']}',
+                                    '${localizations.product}: ${notification.data['product_name']}',
                                     style: TextStyle(
                                       fontSize: 12,
                                       color: Colors.grey.shade700,
@@ -337,15 +341,15 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     );
   }
 
-  // ✅ Nouvelle méthode pour l'état vide personnalisé
-  Widget _buildEmptyState(String? userType) {
+  // Méthode pour l'état vide personnalisé
+  Widget _buildEmptyState(String? userType, AppLocalizations localizations) {
     String title = userType == 'fournisseur'
-        ? 'Aucune nouvelle commande'
-        : 'Aucune notification';
+        ? localizations.noNewOrders
+        : localizations.noNotifications;
 
     String message = userType == 'fournisseur'
-        ? 'Vous n\'avez pas encore reçu de commandes'
-        : 'Vous n\'avez pas encore de mises à jour sur vos commandes';
+        ? localizations.noOrdersReceived
+        : localizations.noOrderUpdates;
 
     return Center(
       child: Column(

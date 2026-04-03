@@ -32,7 +32,7 @@ class _ScanResultScreenState extends State<ScanResultScreen> {
     if (scannedProduct == null) {
       return Scaffold(
         appBar: AppBar(
-          title: const Text('Résultat du scan'),
+          title: Text(localizations.scanResult),
           backgroundColor: Colors.white,
           elevation: 0,
         ),
@@ -47,7 +47,7 @@ class _ScanResultScreenState extends State<ScanResultScreen> {
               ),
               const SizedBox(height: 16),
               Text(
-                barcodeService.error ?? 'Produit non trouvé',
+                barcodeService.error ?? localizations.productNotFound,
                 style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w500,
@@ -55,7 +55,7 @@ class _ScanResultScreenState extends State<ScanResultScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Vérifiez le code-barres et réessayez',
+                localizations.checkBarcodeAndRetry,
                 style: TextStyle(
                   fontSize: 14,
                   color: Colors.grey.shade600,
@@ -69,7 +69,7 @@ class _ScanResultScreenState extends State<ScanResultScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                 ),
-                child: const Text('Scanner à nouveau'),
+                child: Text(localizations.scanAgain),
               ),
             ],
           ),
@@ -85,9 +85,9 @@ class _ScanResultScreenState extends State<ScanResultScreen> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        title: const Text(
-          'Produit scanné',
-          style: TextStyle(
+        title: Text(
+          localizations.scannedProduct,
+          style: const TextStyle(
             color: Color(0xFF2D3A4F),
             fontWeight: FontWeight.bold,
           ),
@@ -159,7 +159,7 @@ class _ScanResultScreenState extends State<ScanResultScreen> {
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
-                            'Code: ${scannedProduct.barcode}',
+                            '${localizations.code}: ${scannedProduct.barcode}',
                             style: TextStyle(
                               fontSize: 10,
                               color: Colors.grey.shade600,
@@ -196,9 +196,9 @@ class _ScanResultScreenState extends State<ScanResultScreen> {
                     children: [
                       Icon(Icons.compare_arrows, color: AppColors.primary),
                       const SizedBox(width: 8),
-                      const Text(
-                        'Comparer les offres',
-                        style: TextStyle(
+                      Text(
+                        localizations.compareOffers,
+                        style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                         ),
@@ -238,9 +238,9 @@ class _ScanResultScreenState extends State<ScanResultScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text(
-                          'Quantité',
-                          style: TextStyle(
+                        Text(
+                          localizations.quantity,
+                          style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
                           ),
@@ -274,8 +274,8 @@ class _ScanResultScreenState extends State<ScanResultScreen> {
                                   setState(() => _quantity++);
                                 } else {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Stock insuffisant'),
+                                    SnackBar(
+                                      content: Text(localizations.insufficientStock),
                                       backgroundColor: Colors.orange,
                                     ),
                                   );
@@ -296,7 +296,7 @@ class _ScanResultScreenState extends State<ScanResultScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Sous-total',
+                              localizations.subtotal,
                               style: TextStyle(
                                 fontSize: 12,
                                 color: Colors.grey.shade600,
@@ -316,8 +316,6 @@ class _ScanResultScreenState extends State<ScanResultScreen> {
                           width: 140,
                           height: 45,
                           child: ElevatedButton.icon(
-                            // Dans scan_result_screen.dart, remplacez le TODO par :
-
                             onPressed: () async {
                               if (_selectedOffer == null) return;
 
@@ -329,9 +327,9 @@ class _ScanResultScreenState extends State<ScanResultScreen> {
 
                               // Afficher un indicateur de chargement
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Ajout en cours...'),
-                                  duration: Duration(milliseconds: 500),
+                                SnackBar(
+                                  content: Text(localizations.addingInProgress),
+                                  duration: const Duration(milliseconds: 500),
                                 ),
                               );
 
@@ -370,7 +368,7 @@ class _ScanResultScreenState extends State<ScanResultScreen> {
                               if (success) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
-                                    content: Text('${_quantity} x ${scannedProduct.name} ajouté au panier'),
+                                    content: Text('$_quantity x ${scannedProduct.name} ${localizations.addedToCart}'),
                                     backgroundColor: Colors.green,
                                     duration: const Duration(seconds: 2),
                                   ),
@@ -379,14 +377,14 @@ class _ScanResultScreenState extends State<ScanResultScreen> {
                               } else {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
-                                    content: Text(cartService.error ?? 'Erreur lors de l\'ajout au panier'),
+                                    content: Text(cartService.error ?? localizations.errorOccurred),
                                     backgroundColor: Colors.red,
                                   ),
                                 );
                               }
                             },
                             icon: const Icon(Icons.add_shopping_cart),
-                            label: const Text('Ajouter'),
+                            label: Text(localizations.add),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.white,
                               shape: RoundedRectangleBorder(
@@ -469,7 +467,7 @@ class _ScanResultScreenState extends State<ScanResultScreen> {
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        'Livraison: ${offer.deliveryDays} jours',
+                        '${localizations.delivery}: ${offer.deliveryDays} ${localizations.days}',
                         style: TextStyle(
                           fontSize: 11,
                           color: Colors.grey.shade600,
@@ -486,7 +484,7 @@ class _ScanResultScreenState extends State<ScanResultScreen> {
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        offer.isInStock ? 'En stock' : 'Rupture',
+                        offer.isInStock ? localizations.inStock : localizations.outOfStock,
                         style: TextStyle(
                           fontSize: 11,
                           color: offer.isInStock ? Colors.green : Colors.red,

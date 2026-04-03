@@ -1,4 +1,5 @@
 // lib/screens/commercant/products_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'dart:convert';
@@ -80,9 +81,10 @@ class _ProductsScreenState extends State<ProductsScreen> {
       }
     } catch (e) {
       debugPrint('Error loading categories: $e');
+      // lib/screens/commercant/products_screen.dart (suite)
+
     } finally {
       setState(() => _isLoadingCategories = false);
-      // Charger les produits après les catégories
       _loadProducts();
     }
   }
@@ -108,13 +110,10 @@ class _ProductsScreenState extends State<ProductsScreen> {
         url += '&search=${_searchController.text}';
       }
 
-      // Filtre par catégorie
       if (_selectedCategoryId.isNotEmpty) {
         url += '&categ_id=$_selectedCategoryId';
-        print('🎯 Filtre par catégorie ID: $_selectedCategoryId');
       }
 
-      // Appliquer le tri
       if (_selectedSort == localizations.sortBestSelling) {
         url += '&order_by=popular_rank&order_dir=desc';
       } else if (_selectedSort == localizations.sortPriceAsc) {
@@ -124,8 +123,6 @@ class _ProductsScreenState extends State<ProductsScreen> {
       } else if (_selectedSort == localizations.sortNewest) {
         url += '&order_by=create_date&order_dir=desc';
       }
-
-      print('🔍 URL: $url');
 
       final response = await http.get(Uri.parse(url), headers: {
         'Authorization': 'Bearer ${merchantService.token}',
@@ -163,7 +160,6 @@ class _ProductsScreenState extends State<ProductsScreen> {
   Widget build(BuildContext context) {
     final localizations = AppLocalizations.of(context)!;
 
-    // Initialiser les options de tri avec les traductions
     _sortOptions = [
       localizations.sortBestSelling,
       localizations.sortPriceAsc,
@@ -171,7 +167,6 @@ class _ProductsScreenState extends State<ProductsScreen> {
       localizations.sortNewest,
     ];
 
-    // Initialiser la valeur sélectionnée si elle est vide
     if (_selectedSort.isEmpty) {
       _selectedSort = localizations.sortBestSelling;
     }
@@ -212,7 +207,6 @@ class _ProductsScreenState extends State<ProductsScreen> {
             const SizedBox(width: 8),
           ],
         ),
-
         actions: [
           IconButton(
             icon: const Icon(Icons.qr_code_scanner, color: Color(0xFF2D3A4F)),
@@ -224,7 +218,6 @@ class _ProductsScreenState extends State<ProductsScreen> {
                     onScan: (code) async {
                       final barcodeService = Provider.of<BarcodeService>(context, listen: false);
                       final success = await barcodeService.scanBarcode(code);
-
                       if (success) {
                         Navigator.pushReplacement(
                           context,
@@ -250,7 +243,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
           ),
           NotificationIcon(color: const Color(0xFF2D3A4F)),
           IconButton(
-            icon: CartIconWithBadge(), // 👈 Utilise le widget personnalisé
+            icon: CartIconWithBadge(),
             onPressed: () => Navigator.pushNamed(context, '/merchant/cart'),
           ),
         ],
@@ -475,12 +468,9 @@ class _ProductsScreenState extends State<ProductsScreen> {
     );
   }
 
-  // lib/screens/commercant/products_screen.dart
-
   Widget _buildProductCard(Product product) {
     final localizations = AppLocalizations.of(context)!;
 
-    // Obtenir le prix selon le conditionnement par défaut
     double displayPrice = product.currentPrice;
     String displayUnit = 'pièce';
 
@@ -496,7 +486,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
     }
 
     return Container(
-      height: 280, // 👈 Hauteur fixe
+      height: 280,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -510,27 +500,26 @@ class _ProductsScreenState extends State<ProductsScreen> {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min, // 👈 AJOUTER mainAxisSize.min
+        mainAxisSize: MainAxisSize.min,
         children: [
-          // Image - hauteur fixe
+          // Image
           ClipRRect(
             borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
             child: ProductImage(
               productId: product.id,
-              imageUrl: product.imageUrl,
+              imageUrl: product.mainImageUrl,
               width: double.infinity,
               height: 120,
               fit: BoxFit.cover,
             ),
           ),
-
-          // Contenu - avec Expanded pour prendre le reste
+          // Contenu
           Expanded(
             child: Padding(
               padding: const EdgeInsets.all(10),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min, // 👈 AJOUTER mainAxisSize.min
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     product.name,
@@ -554,7 +543,6 @@ class _ProductsScreenState extends State<ProductsScreen> {
                       overflow: TextOverflow.ellipsis,
                     ),
                   const SizedBox(height: 8),
-                  // Prix - avec Flexible pour éviter le débordement
                   Flexible(
                     child: Row(
                       children: [
@@ -597,7 +585,6 @@ class _ProductsScreenState extends State<ProductsScreen> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  // Badge quantité minimum
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(

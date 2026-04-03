@@ -46,10 +46,12 @@ class _AddReviewScreenState extends State<AddReviewScreen> {
   }
 
   Future<void> _submitReview() async {
+    final localizations = AppLocalizations.of(context)!;
+
     if (_rating == 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Veuillez sélectionner une note'),
+        SnackBar(
+          content: Text(localizations.selectRatingError),
           backgroundColor: Colors.orange,
         ),
       );
@@ -79,7 +81,7 @@ class _AddReviewScreenState extends State<AddReviewScreen> {
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(result['message'] ?? 'Erreur'),
+          content: Text(result['message'] ?? localizations.error),
           backgroundColor: Colors.red,
         ),
       );
@@ -87,22 +89,24 @@ class _AddReviewScreenState extends State<AddReviewScreen> {
   }
 
   Future<void> _confirmDelete() async {
+    final localizations = AppLocalizations.of(context)!;
+
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Supprimer l\'avis'),
-        content: const Text('Voulez-vous vraiment supprimer votre avis ?'),
+        title: Text(localizations.deleteReviewTitle),
+        content: Text(localizations.deleteReviewConfirm),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Annuler'),
+            child: Text(localizations.cancel),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
             ),
-            child: const Text('Supprimer'),
+            child: Text(localizations.delete),
           ),
         ],
       ),
@@ -118,13 +122,25 @@ class _AddReviewScreenState extends State<AddReviewScreen> {
 
       if (success && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Avis supprimé'),
+          SnackBar(
+            content: Text(localizations.reviewDeleted),
             backgroundColor: Colors.green,
           ),
         );
         Navigator.pop(context);
       }
+    }
+  }
+
+  String _getRatingText(int rating, AppLocalizations localizations) {
+    if (rating == 0) {
+      return localizations.tapToRate;
+    }
+    // Utiliser la clé sans paramètre et formater manuellement
+    if (rating == 1) {
+      return '${localizations.youRated} 1 ${localizations.star}';
+    } else {
+      return '${localizations.youRated} $rating ${localizations.stars}';
     }
   }
 
@@ -149,7 +165,9 @@ class _AddReviewScreenState extends State<AddReviewScreen> {
               ),
             ),
             Text(
-              widget.existingReview == null ? 'Ajouter un avis' : 'Modifier votre avis',
+              widget.existingReview == null
+                  ? localizations.addReview
+                  : localizations.editReview,
               style: TextStyle(
                 fontSize: 12,
                 color: Colors.grey.shade600,
@@ -191,9 +209,9 @@ class _AddReviewScreenState extends State<AddReviewScreen> {
               ),
               child: Column(
                 children: [
-                  const Text(
-                    'Votre note',
-                    style: TextStyle(
+                  Text(
+                    localizations.yourRating,
+                    style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                     ),
@@ -213,9 +231,7 @@ class _AddReviewScreenState extends State<AddReviewScreen> {
 
                   const SizedBox(height: 8),
                   Text(
-                    _rating == 0
-                        ? 'Tapez pour noter'
-                        : 'Vous avez noté $_rating étoile${_rating > 1 ? 's' : ''}',
+                    _getRatingText(_rating, localizations),
                     style: TextStyle(
                       color: Colors.grey.shade600,
                       fontSize: 14,
@@ -244,9 +260,9 @@ class _AddReviewScreenState extends State<AddReviewScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Votre commentaire (optionnel)',
-                    style: TextStyle(
+                  Text(
+                    localizations.yourCommentOptional,
+                    style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                     ),
@@ -257,7 +273,7 @@ class _AddReviewScreenState extends State<AddReviewScreen> {
                     maxLines: 4,
                     maxLength: 500,
                     decoration: InputDecoration(
-                      hintText: 'Partagez votre expérience...',
+                      hintText: localizations.commentHint,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -301,14 +317,14 @@ class _AddReviewScreenState extends State<AddReviewScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'Publier anonymement',
-                          style: TextStyle(
+                        Text(
+                          localizations.publishAnonymously,
+                          style: const TextStyle(
                             fontWeight: FontWeight.w600,
                           ),
                         ),
                         Text(
-                          'Votre nom n\'apparaîtra pas',
+                          localizations.yourNameWillNotAppear,
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.grey.shade600,
@@ -338,8 +354,8 @@ class _AddReviewScreenState extends State<AddReviewScreen> {
                 ),
                 child: Text(
                   widget.existingReview == null
-                      ? 'Publier mon avis'
-                      : 'Mettre à jour',
+                      ? localizations.publishReview
+                      : localizations.updateReview,
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,

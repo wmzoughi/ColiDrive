@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1067028723422",
+    "project_id": "colidrive",
+    "storage_bucket": "colidrive.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1067028723422:android:61193f9f17e04c5b25f44f",
+        "android_client_info": {
+          "package_name": "com.example.colidrive"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAbBC64gBba_t8ZlcnDPKIlrJzSJYgPZQ0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

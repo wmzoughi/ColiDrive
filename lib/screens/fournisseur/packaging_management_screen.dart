@@ -38,14 +38,17 @@ class _PackagingManagementScreenState extends State<PackagingManagementScreen> {
     } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) {
+        final localizations = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text('${localizations.error}: $e'), backgroundColor: Colors.red),
         );
       }
     }
   }
 
   Future<void> _addPackaging() async {
+    final localizations = AppLocalizations.of(context)!;
+
     final result = await showDialog<Map<String, dynamic>>(
       context: context,
       builder: (context) => _PackagingFormDialog(product: widget.product),
@@ -59,13 +62,13 @@ class _PackagingManagementScreenState extends State<PackagingManagementScreen> {
 
       if (response['success']) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Conditionnement ajouté'), backgroundColor: AppColors.success),
+          SnackBar(content: Text(localizations.packagingAdded), backgroundColor: AppColors.success),
         );
         await _loadPackagings();
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(response['errors']?['general']?[0] ?? 'Erreur'),
+            content: Text(response['errors']?['general']?[0] ?? localizations.error),
             backgroundColor: AppColors.error,
           ),
         );
@@ -75,6 +78,8 @@ class _PackagingManagementScreenState extends State<PackagingManagementScreen> {
   }
 
   Future<void> _editPackaging(Map<String, dynamic> packaging) async {
+    final localizations = AppLocalizations.of(context)!;
+
     final result = await showDialog<Map<String, dynamic>>(
       context: context,
       builder: (context) => _PackagingFormDialog(
@@ -95,13 +100,13 @@ class _PackagingManagementScreenState extends State<PackagingManagementScreen> {
 
       if (response['success']) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Conditionnement modifié'), backgroundColor: AppColors.success),
+          SnackBar(content: Text(localizations.packagingUpdated), backgroundColor: AppColors.success),
         );
         await _loadPackagings();
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(response['errors']?['general']?[0] ?? 'Erreur'),
+            content: Text(response['errors']?['general']?[0] ?? localizations.error),
             backgroundColor: AppColors.error,
           ),
         );
@@ -111,17 +116,19 @@ class _PackagingManagementScreenState extends State<PackagingManagementScreen> {
   }
 
   Future<void> _deletePackaging(int packagingId) async {
+    final localizations = AppLocalizations.of(context)!;
+
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Supprimer'),
-        content: const Text('Voulez-vous vraiment supprimer ce conditionnement ?'),
+        title: Text(localizations.delete),
+        content: Text(localizations.deletePackagingConfirm),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Annuler')),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(localizations.cancel)),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Supprimer'),
+            child: Text(localizations.delete),
           ),
         ],
       ),
@@ -135,12 +142,12 @@ class _PackagingManagementScreenState extends State<PackagingManagementScreen> {
 
       if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Conditionnement supprimé'), backgroundColor: AppColors.success),
+          SnackBar(content: Text(localizations.packagingDeleted), backgroundColor: AppColors.success),
         );
         await _loadPackagings();
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Erreur lors de la suppression'), backgroundColor: AppColors.error),
+          SnackBar(content: Text(localizations.packagingDeleteError), backgroundColor: AppColors.error),
         );
         setState(() => _isLoading = false);
       }
@@ -177,10 +184,11 @@ class _PackagingManagementScreenState extends State<PackagingManagementScreen> {
   @override
   Widget build(BuildContext context) {
     final isArabic = Localizations.localeOf(context).languageCode == 'ar';
+    final localizations = AppLocalizations.of(context)!;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Conditionnements - ${widget.product.name}'),
+        title: Text('${localizations.packagings} - ${widget.product.name}'),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         leading: IconButton(
@@ -204,7 +212,7 @@ class _PackagingManagementScreenState extends State<PackagingManagementScreen> {
                     Icon(Icons.info_outline, color: Colors.blue.shade700),
                     const SizedBox(width: 8),
                     Text(
-                      'Informations de base',
+                      localizations.basicInfo,
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
@@ -214,12 +222,12 @@ class _PackagingManagementScreenState extends State<PackagingManagementScreen> {
                   ],
                 ),
                 const SizedBox(height: 12),
-                _buildInfoRow('Unité de base', widget.product.baseUnit ?? 'Pièce'),
-                _buildInfoRow('Quantité par défaut', '${widget.product.defaultPackagingQuantity ?? 1} pièces'),
+                _buildInfoRow(localizations.baseUnit, widget.product.baseUnit ?? localizations.piece, localizations),
+                _buildInfoRow(localizations.defaultQuantity, '${widget.product.defaultPackagingQuantity ?? 1} ${localizations.pieces}', localizations),
                 if (widget.product.unitWeight != null)
-                  _buildInfoRow('Poids unitaire', '${widget.product.unitWeight} kg'),
+                  _buildInfoRow(localizations.unitWeight, '${widget.product.unitWeight} kg', localizations),
                 if (widget.product.unitVolume != null)
-                  _buildInfoRow('Volume unitaire', '${widget.product.unitVolume} L'),
+                  _buildInfoRow(localizations.unitVolume, '${widget.product.unitVolume} L', localizations),
               ],
             ),
           ),
@@ -234,19 +242,19 @@ class _PackagingManagementScreenState extends State<PackagingManagementScreen> {
                   Icon(Icons.inventory_2_outlined, size: 64, color: Colors.grey.shade400),
                   const SizedBox(height: 16),
                   Text(
-                    'Aucun conditionnement',
+                    localizations.noPackagings,
                     style: TextStyle(color: Colors.grey.shade600, fontSize: 16),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Ajoutez des conditionnements comme "Carton", "Palette", etc.',
+                    localizations.addPackagingHint,
                     style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
                   ),
                   const SizedBox(height: 24),
                   ElevatedButton.icon(
                     onPressed: _addPackaging,
                     icon: const Icon(Icons.add),
-                    label: const Text('Ajouter un conditionnement'),
+                    label: Text(localizations.addPackaging),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
                     ),
@@ -259,7 +267,7 @@ class _PackagingManagementScreenState extends State<PackagingManagementScreen> {
               itemCount: _packagings.length,
               itemBuilder: (context, index) {
                 final p = _packagings[index];
-                return _buildPackagingCard(p);
+                return _buildPackagingCard(p, localizations);
               },
             ),
           ),
@@ -275,7 +283,7 @@ class _PackagingManagementScreenState extends State<PackagingManagementScreen> {
     );
   }
 
-  Widget _buildInfoRow(String label, String value) {
+  Widget _buildInfoRow(String label, String value, AppLocalizations localizations) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -290,7 +298,7 @@ class _PackagingManagementScreenState extends State<PackagingManagementScreen> {
     );
   }
 
-  Widget _buildPackagingCard(Map<String, dynamic> packaging) {
+  Widget _buildPackagingCard(Map<String, dynamic> packaging, AppLocalizations localizations) {
     final isDefault = packaging['is_default'] ?? false;
 
     return Card(
@@ -328,21 +336,21 @@ class _PackagingManagementScreenState extends State<PackagingManagementScreen> {
                             color: Colors.green,
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: const Text(
-                            'Par défaut',
-                            style: TextStyle(color: Colors.white, fontSize: 10),
+                          child: Text(
+                            localizations.defaultPackaging,
+                            style: const TextStyle(color: Colors.white, fontSize: 10),
                           ),
                         ),
                     ],
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '${packaging['quantity']} pièces',
+                    '${packaging['quantity']} ${localizations.pieces}',
                     style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
                   ),
                   if (packaging['price'] != null)
                     Text(
-                      '${(packaging['price'] as num).toStringAsFixed(2)} MAD',
+                      '${(packaging['price'] as num).toStringAsFixed(2)} ${localizations.currency}',
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         color: AppColors.primary,
@@ -394,6 +402,8 @@ class _PackagingFormDialogState extends State<_PackagingFormDialog> {
   @override
   void initState() {
     super.initState();
+    final localizations = AppLocalizations.of(context)!;
+
     _nameController = TextEditingController(text: widget.packaging?['name']);
     _quantityController = TextEditingController(text: (widget.packaging?['quantity'] ?? 1).toString());
     _priceController = TextEditingController(text: widget.packaging?['price']?.toString());
@@ -413,8 +423,10 @@ class _PackagingFormDialogState extends State<_PackagingFormDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context)!;
+
     return AlertDialog(
-      title: Text(widget.packaging == null ? 'Ajouter un conditionnement' : 'Modifier le conditionnement'),
+      title: Text(widget.packaging == null ? localizations.addPackaging : localizations.editPackaging),
       content: SingleChildScrollView(
         child: Form(
           key: _formKey,
@@ -423,17 +435,17 @@ class _PackagingFormDialogState extends State<_PackagingFormDialog> {
             children: [
               TextFormField(
                 controller: _nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Nom',
-                  hintText: 'Ex: Carton, Palette, Pack',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: localizations.name,
+                  hintText: localizations.packagingNameHint,
+                  border: const OutlineInputBorder(),
                 ),
-                validator: (v) => v?.isEmpty ?? true ? 'Requis' : null,
+                validator: (v) => v?.isEmpty ?? true ? localizations.fieldRequired : null,
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
                 value: _selectedType,
-                decoration: const InputDecoration(labelText: 'Type', border: OutlineInputBorder()),
+                decoration: InputDecoration(labelText: localizations.type, border: const OutlineInputBorder()),
                 items: const [
                   DropdownMenuItem(value: 'box', child: Text('Boîte')),
                   DropdownMenuItem(value: 'carton', child: Text('Carton')),
@@ -448,14 +460,14 @@ class _PackagingFormDialogState extends State<_PackagingFormDialog> {
               TextFormField(
                 controller: _quantityController,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Quantité (pièces)',
-                  hintText: 'Nombre d\'unités dans ce conditionnement',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: localizations.quantityPieces,
+                  hintText: localizations.quantityHint,
+                  border: const OutlineInputBorder(),
                 ),
                 validator: (v) {
-                  if (v?.isEmpty ?? true) return 'Requis';
-                  if (int.tryParse(v!) == null) return 'Nombre valide requis';
+                  if (v?.isEmpty ?? true) return localizations.fieldRequired;
+                  if (int.tryParse(v!) == null) return localizations.invalidNumber;
                   return null;
                 },
               ),
@@ -463,23 +475,23 @@ class _PackagingFormDialogState extends State<_PackagingFormDialog> {
               TextFormField(
                 controller: _priceController,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Prix (optionnel)',
-                  hintText: 'Laisser vide pour utiliser le prix unitaire',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: localizations.priceOptional,
+                  hintText: localizations.priceOptionalHint,
+                  border: const OutlineInputBorder(),
                 ),
               ),
               const SizedBox(height: 12),
               TextFormField(
                 controller: _barcodeController,
-                decoration: const InputDecoration(
-                  labelText: 'Code-barres (optionnel)',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: localizations.barcodeOptional,
+                  border: const OutlineInputBorder(),
                 ),
               ),
               const SizedBox(height: 12),
               CheckboxListTile(
-                title: const Text('Conditionnement par défaut'),
+                title: Text(localizations.defaultPackaging),
                 value: _isDefault,
                 onChanged: (v) => setState(() => _isDefault = v ?? false),
                 controlAffinity: ListTileControlAffinity.leading,
@@ -490,17 +502,19 @@ class _PackagingFormDialogState extends State<_PackagingFormDialog> {
         ),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler')),
+        TextButton(onPressed: () => Navigator.pop(context), child: Text(localizations.cancel)),
         ElevatedButton(
           onPressed: _submit,
           style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-          child: Text(widget.packaging == null ? 'Ajouter' : 'Modifier'),
+          child: Text(widget.packaging == null ? localizations.add : localizations.edit),
         ),
       ],
     );
   }
 
   void _submit() {
+    final localizations = AppLocalizations.of(context)!;
+
     if (_formKey.currentState!.validate()) {
       Navigator.pop(context, {
         'name': _nameController.text,

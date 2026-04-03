@@ -8,6 +8,7 @@ import '../../utils/constants.dart';
 import '../../widgets/bottom_nav_bar.dart';
 import 'invoice_detail_screen.dart';
 import '../../models/invoice.dart';
+import '../../l10n/app_localizations.dart';
 
 class InvoicesScreen extends StatefulWidget {
   const InvoicesScreen({Key? key}) : super(key: key);
@@ -18,14 +19,21 @@ class InvoicesScreen extends StatefulWidget {
 
 class _InvoicesScreenState extends State<InvoicesScreen> {
   final ScrollController _scrollController = ScrollController();
-  String _selectedFilter = 'Toutes';
+  String _selectedFilter = '';
 
   @override
   void initState() {
     super.initState();
-    _loadInvoices();
+    // Attendre que les localizations soient disponibles
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final localizations = AppLocalizations.of(context)!;
+      setState(() {
+        _selectedFilter = localizations.filterAll;
+      });
+      _loadInvoices();
+    });
     _scrollController.addListener(_onScroll);
-    // ✅ Marquer comme vu quand on arrive sur l'écran
+    // Marquer comme vu quand on arrive sur l'écran
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final service = Provider.of<InvoiceService>(context, listen: false);
       service.markInvoicesAsViewed();
@@ -47,28 +55,52 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
     }
   }
 
-  List<Invoice> _getFilteredInvoices(InvoiceService service) {
-    if (_selectedFilter == 'Toutes') {
+  List<Invoice> _getFilteredInvoices(InvoiceService service, AppLocalizations localizations) {
+    if (_selectedFilter == localizations.filterAll) {
       return service.invoices;
     }
     // Filtrer par mois ou année si besoin
     return service.invoices;
   }
 
+  String _getTotalInvoicedText(double total, AppLocalizations localizations) {
+    return '${total.toStringAsFixed(2)} ${localizations.currency}';
+  }
+
+  String _getStatusText(String status, AppLocalizations localizations) {
+    return status == 'paid' ? localizations.invoice_paid : localizations.invoice_pending;
+  }
+
+  Color _getStatusColor(String status) {
+    return status == 'paid' ? Colors.green : Colors.orange;
+  }
+
   @override
   Widget build(BuildContext context) {
     final service = Provider.of<InvoiceService>(context);
     final authService = Provider.of<AuthService>(context);
+    final localizations = AppLocalizations.of(context)!;
     final user = authService.currentUser;
+
+    // Initialiser le filtre si vide
+    if (_selectedFilter.isEmpty) {
+      _selectedFilter = localizations.filterAll;
+    }
+
+    // Calculer le total facturé
+    double totalInvoiced = 0;
+    for (var invoice in service.invoices) {
+      totalInvoiced += invoice.total;
+    }
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        title: const Text(
-          'Mes factures',
-          style: TextStyle(
+        title: Text(
+          localizations.invoices,
+          style: const TextStyle(
             color: Color(0xFF2D3A4F),
             fontWeight: FontWeight.bold,
             fontSize: 20,
@@ -102,13 +134,13 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: [
-                  _buildFilterChip('Toutes', _selectedFilter == 'Toutes'),
+                  _buildFilterChip(localizations.filter_all, _selectedFilter == localizations.filter_all, localizations),
                   const SizedBox(width: 8),
-                  _buildFilterChip('Ce mois', _selectedFilter == 'Ce mois'),
+                  _buildFilterChip(localizations.filter_this_month, _selectedFilter == localizations.filter_this_month, localizations),
                   const SizedBox(width: 8),
-                  _buildFilterChip('Mois dernier', _selectedFilter == 'Mois dernier'),
+                  _buildFilterChip(localizations.filter_last_month, _selectedFilter == localizations.filter_last_month, localizations),
                   const SizedBox(width: 8),
-                  _buildFilterChip('2026', _selectedFilter == '2026'),
+                  _buildFilterChip('2026', _selectedFilter == '2026', localizations),
                 ],
               ),
             ),
@@ -140,16 +172,16 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Total facturé',
-                        style: TextStyle(
+                      Text(
+                        localizations.total_invoiced,
+                        style: const TextStyle(
                           color: Colors.white70,
                           fontSize: 12,
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        _getTotalInvoiced(service),
+                        _getTotalInvoicedText(totalInvoiced, localizations),
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 24,
@@ -179,7 +211,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
             child: service.isLoading && service.invoices.isEmpty
                 ? const Center(child: CircularProgressIndicator())
                 : service.invoices.isEmpty
-                ? _buildEmptyState()
+                ? _buildEmptyState(localizations)
                 : RefreshIndicator(
               onRefresh: () => _loadInvoices(reset: true),
               child: ListView.builder(
@@ -197,7 +229,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                   }
 
                   final invoice = service.invoices[index];
-                  return _buildInvoiceCard(invoice);
+                  return _buildInvoiceCard(invoice, localizations);
                 },
               ),
             ),
@@ -227,7 +259,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
     );
   }
 
-  Widget _buildFilterChip(String label, bool isSelected) {
+  Widget _buildFilterChip(String label, bool isSelected, AppLocalizations localizations) {
     return FilterChip(
       label: Text(label),
       selected: isSelected,
@@ -247,9 +279,9 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
     );
   }
 
-  Widget _buildInvoiceCard(Invoice invoice) {
-    Color statusColor = invoice.status == 'paid' ? Colors.green : Colors.orange;
-    String statusText = invoice.status == 'paid' ? 'Payée' : 'En attente';
+  Widget _buildInvoiceCard(Invoice invoice, AppLocalizations localizations) {
+    Color statusColor = _getStatusColor(invoice.status);
+    String statusText = _getStatusText(invoice.status, localizations);
 
     return GestureDetector(
       onTap: () {
@@ -310,7 +342,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Date: ${invoice.invoiceDate}',
+                          '${localizations.invoice_date}: ${invoice.invoiceDate}',
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.grey.shade600,
@@ -351,7 +383,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Client',
+                          localizations.invoice_customer,
                           style: TextStyle(
                             fontSize: 11,
                             color: Colors.grey.shade600,
@@ -384,7 +416,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
-                        'Total',
+                        localizations.invoice_total,
                         style: TextStyle(
                           fontSize: 11,
                           color: Colors.grey.shade600,
@@ -423,7 +455,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                       if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: Text('Téléchargement démarré'),
+                            content: Text(localizations.invoice_download),
                             backgroundColor: Colors.green,
                             duration: const Duration(seconds: 2),
                           ),
@@ -431,7 +463,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                       }
                     },
                     icon: const Icon(Icons.download, size: 18),
-                    label: const Text('PDF'),
+                    label: Text(localizations.invoice_download),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.primary,
                       side: BorderSide(color: AppColors.primary.withOpacity(0.5)),
@@ -452,7 +484,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                       );
                     },
                     icon: const Icon(Icons.visibility, size: 18),
-                    label: const Text('Détails'),
+                    label: Text(localizations.invoice_details),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
                       foregroundColor: Colors.white,
@@ -471,15 +503,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
     );
   }
 
-  String _getTotalInvoiced(InvoiceService service) {
-    double total = 0;
-    for (var invoice in service.invoices) {
-      total += invoice.total;
-    }
-    return '${total.toStringAsFixed(2)} MAD';
-  }
-
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(AppLocalizations localizations) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -498,9 +522,9 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
             ),
           ),
           const SizedBox(height: 24),
-          const Text(
-            'Aucune facture',
-            style: TextStyle(
+          Text(
+            localizations.invoice_no_invoices,
+            style: const TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
               color: Color(0xFF2D3A4F),
@@ -508,7 +532,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Vos factures apparaîtront ici\naprès vos achats',
+            localizations.invoice_no_invoices_desc,
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 14,
@@ -522,7 +546,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
               Navigator.pushReplacementNamed(context, '/merchant/products');
             },
             icon: const Icon(Icons.shopping_bag),
-            label: const Text('Découvrir les produits'),
+            label: Text(localizations.discoverShopsButton),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
               foregroundColor: Colors.white,

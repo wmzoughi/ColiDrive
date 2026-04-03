@@ -10,6 +10,7 @@ import '../../services/auth_service.dart';
 import '../../services/review_service.dart';
 import '../../utils/constants.dart';
 import '../../widgets/product_image.dart';
+import '../../widgets/image_carousel.dart';
 import '../../l10n/app_localizations.dart';
 import '../../widgets/notification_icon.dart';
 
@@ -37,12 +38,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     _loadPackagings();
   }
 
-  // 👇 CHARGER LES CONDITIONNEMENTS AVEC LA ROUTE PUBLIQUE
   Future<void> _loadPackagings() async {
     setState(() => _isLoadingPackagings = true);
 
     try {
-      // 👉 UTILISER LA ROUTE PUBLIQUE (SANS TOKEN)
       final response = await http.get(
         Uri.parse('${AppConstants.baseUrl}/products/${widget.product.id}/packagings'),
         headers: {
@@ -51,23 +50,14 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         },
       );
 
-      print('📥 Chargement conditionnements - Status: ${response.statusCode}');
-      print('📥 Réponse: ${response.body}');
-
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         if (data['success']) {
           final List packagingsJson = data['data']['packagings'] ?? [];
           final packagings = packagingsJson.map((p) => ProductPackaging.fromJson(p)).toList();
 
-          print('📦 Conditionnements trouvés: ${packagings.length}');
-          for (var p in packagings) {
-            print('   - ${p.name}: ${p.quantity} pièces, prix: ${p.price}');
-          }
-
           setState(() {
             _packagings = packagings;
-            // Sélectionner le conditionnement par défaut s'il existe
             if (_packagings.isNotEmpty) {
               final defaultPackaging = _packagings.firstWhere(
                     (p) => p.isDefault,
@@ -77,19 +67,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             }
           });
         }
-      } else {
-        print('❌ Erreur: ${response.body}');
       }
     } catch (e) {
       print('❌ Erreur chargement conditionnements: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Erreur de chargement: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
     } finally {
       if (mounted) {
         setState(() => _isLoadingPackagings = false);
@@ -97,7 +77,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     }
   }
 
-  // Obtenir le prix pour le conditionnement sélectionné
   double get _currentPrice {
     if (_selectedPackaging != null && _selectedPackaging!.price != null) {
       return _selectedPackaging!.price!;
@@ -105,7 +84,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     return widget.product.currentPrice;
   }
 
-  // Obtenir la quantité totale en pièces
   int get _totalPiecesQuantity {
     if (_selectedPackaging != null) {
       return _quantity * _selectedPackaging!.quantity;
@@ -113,16 +91,14 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     return _quantity;
   }
 
-  // Obtenir le texte du conditionnement
-  String _getPackagingDisplayText(ProductPackaging packaging) {
+  String _getPackagingDisplayText(ProductPackaging packaging, AppLocalizations localizations) {
     if (packaging.price != null) {
-      return '${packaging.name} (${packaging.quantity} pièces) - ${packaging.price!.toStringAsFixed(2)} MAD';
+      return '${packaging.name} (${packaging.quantity} ${localizations.pieces}) - ${packaging.price!.toStringAsFixed(2)} ${localizations.currency}';
     }
-    return '${packaging.name} (${packaging.quantity} pièces)';
+    return '${packaging.name} (${packaging.quantity} ${localizations.pieces})';
   }
 
-  // Fonction pour obtenir le statut du stock (adapté au conditionnement)
-  Map<String, dynamic> _getStockStatus() {
+  Map<String, dynamic> _getStockStatus(AppLocalizations localizations) {
     int stock = widget.product.stockQuantity ?? 0;
     int requiredQuantity = _totalPiecesQuantity;
     int minAlert = widget.product.minStockAlert ?? 5;
@@ -131,38 +107,37 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       return {
         'color': Colors.red,
         'icon': Icons.error,
-        'label': 'Rupture de stock',
-        'message': 'Produit indisponible',
+        'label': localizations.outOfStock,
+        'message': localizations.productUnavailable,
         'available': false
       };
     } else if (stock < requiredQuantity) {
       return {
         'color': Colors.red,
         'icon': Icons.error,
-        'label': 'Stock insuffisant',
-        'message': 'Stock disponible: $stock pièces',
+        'label': localizations.insufficientStock,
+        'message': '${localizations.stockAvailable}: $stock ${localizations.pieces}',
         'available': false
       };
     } else if (stock <= minAlert) {
       return {
         'color': Colors.orange,
         'icon': Icons.warning,
-        'label': 'Stock faible',
-        'message': 'Plus que $stock pièces en stock',
+        'label': localizations.lowStock,
+        'message': '${localizations.onlyLeft} $stock ${localizations.pieces} ${localizations.inStock}',
         'available': true
       };
     } else {
       return {
         'color': Colors.green,
         'icon': Icons.check_circle,
-        'label': 'En stock',
-        'message': '$stock pièces disponibles',
+        'label': localizations.inStock,
+        'message': '$stock ${localizations.pieces} ${localizations.available}',
         'available': true
       };
     }
   }
 
-  // Fonction pour obtenir la note du fournisseur
   Future<double> _getSupplierRating(int? supplierId) async {
     if (supplierId == null) return 0;
     final reviewService = Provider.of<ReviewService>(context, listen: false);
@@ -176,9 +151,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     final product = widget.product;
     final cartService = Provider.of<CartService>(context, listen: false);
     final isArabic = Localizations.localeOf(context).languageCode == 'ar';
-
-    // Obtenir le statut du stock
-    final stockStatus = _getStockStatus();
+    final stockStatus = _getStockStatus(localizations);
 
     return Directionality(
       textDirection: isArabic ? TextDirection.rtl : TextDirection.ltr,
@@ -258,18 +231,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         body: SingleChildScrollView(
           child: Column(
             children: [
-              // Image
-              Container(
-                width: double.infinity,
+              // Carrousel d'images
+              ImageCarousel(
+                imageUrls: product.allImageUrls,
                 height: 300,
-                color: Colors.white,
-                child: ProductImage(
-                  productId: product.id,
-                  imageUrl: product.imageUrl,
-                  width: double.infinity,
-                  height: 300,
-                  fit: BoxFit.contain,
-                ),
+                productId: product.id,
               ),
 
               // Informations produit
@@ -332,7 +298,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
                     const SizedBox(height: 16),
 
-                    // 👇 SÉLECTEUR DE CONDITIONNEMENT
+                    // Sélecteur de conditionnement
                     Container(
                       margin: const EdgeInsets.only(bottom: 16),
                       padding: const EdgeInsets.all(12),
@@ -349,7 +315,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                               Icon(Icons.inventory_2, color: Colors.orange.shade700, size: 20),
                               const SizedBox(width: 8),
                               Text(
-                                'Choisissez votre conditionnement',
+                                localizations.choosePackaging,
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 16,
@@ -365,7 +331,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                             Padding(
                               padding: const EdgeInsets.all(8.0),
                               child: Text(
-                                'Aucun conditionnement disponible. Achat à l\'unité.',
+                                localizations.noPackagingAvailable,
                                 style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
                               ),
                             )
@@ -374,9 +340,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                               spacing: 8,
                               runSpacing: 8,
                               children: [
-                                // Option "Pièce unitaire"
                                 FilterChip(
-                                  label: Text('Pièce unitaire (1 pièce)'),
+                                  label: Text(localizations.unitPiece),
                                   selected: _selectedPackaging == null,
                                   onSelected: (selected) {
                                     if (selected) {
@@ -391,11 +356,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                     color: _selectedPackaging == null ? Colors.white : Colors.grey.shade700,
                                   ),
                                 ),
-                                // Options de conditionnements
                                 ..._packagings.map((packaging) {
                                   final isSelected = _selectedPackaging == packaging;
                                   return FilterChip(
-                                    label: Text(_getPackagingDisplayText(packaging)),
+                                    label: Text(_getPackagingDisplayText(packaging, localizations)),
                                     selected: isSelected,
                                     onSelected: (selected) {
                                       if (selected) {
@@ -417,7 +381,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                             Padding(
                               padding: const EdgeInsets.only(top: 8),
                               child: Text(
-                                '✨ Économisez en achetant par ${_selectedPackaging!.name.toLowerCase()} !',
+                                '✨ ${localizations.saveByBuying} ${_selectedPackaging!.name.toLowerCase()} !',
                                 style: TextStyle(
                                   fontSize: 12,
                                   color: Colors.orange.shade700,
@@ -470,11 +434,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         ],
                       ),
                     ),
-
-                    const SizedBox(height: 16),
-
-                    // Section avis du fournisseur (garder le reste du code inchangé...)
-                    // ... le reste du code reste identique ...
 
                     const SizedBox(height: 24),
 
@@ -533,7 +492,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                       } else {
                                         ScaffoldMessenger.of(context).showSnackBar(
                                           SnackBar(
-                                            content: Text('Stock insuffisant'),
+                                            content: Text(localizations.insufficientStock),
                                             backgroundColor: Colors.orange,
                                             duration: const Duration(seconds: 1),
                                           ),
@@ -552,12 +511,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
                           const SizedBox(height: 8),
 
-                          // Information sur la quantité totale en pièces
                           if (_selectedPackaging != null)
                             Padding(
                               padding: const EdgeInsets.only(bottom: 8),
                               child: Text(
-                                'Soit $_totalPiecesQuantity pièces au total',
+                                '${localizations.totalPieces}: $_totalPiecesQuantity ${localizations.pieces}',
                                 style: TextStyle(
                                   fontSize: 12,
                                   color: Colors.grey.shade600,
@@ -599,11 +557,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                             child: ElevatedButton.icon(
                               onPressed: stockStatus['available']
                                   ? () async {
-                                final cartService = Provider.of<CartService>(
-                                    context,
-                                    listen: false
-                                );
-
                                 final cartItem = {
                                   'product': widget.product,
                                   'quantity': _quantity,
@@ -617,7 +570,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                 if (success && mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
-                                      content: Text(localizations.addToCart),
+                                      content: Text(localizations.addedToCart),
                                       backgroundColor: AppColors.success,
                                       duration: const Duration(seconds: 2),
                                     ),
@@ -643,7 +596,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                               label: Text(
                                 stockStatus['available']
                                     ? localizations.addToCart
-                                    : 'Indisponible',
+                                    : localizations.unavailable,
                                 style: const TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w600,
@@ -661,14 +614,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                             ),
                           ),
 
-                          // Message si stock faible
                           if (stockStatus['available'] &&
                               widget.product.stockQuantity != null &&
                               widget.product.stockQuantity! < 10)
                             Padding(
                               padding: const EdgeInsets.only(top: 8),
                               child: Text(
-                                '⚠️ Plus que ${widget.product.stockQuantity} pièces en stock',
+                                '⚠️ ${localizations.onlyLeft} ${widget.product.stockQuantity} ${localizations.pieces} ${localizations.inStock}',
                                 style: TextStyle(
                                   fontSize: 12,
                                   color: Colors.orange.shade700,

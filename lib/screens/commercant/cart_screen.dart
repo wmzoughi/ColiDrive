@@ -44,14 +44,13 @@ class _CartScreenState extends State<CartScreen> {
           backgroundColor: Colors.white,
           elevation: 0,
           title: Text(
-            'Mon Panier',
+            localizations.myCart,
             style: const TextStyle(
               color: Color(0xFF2D3A4F),
               fontWeight: FontWeight.bold,
               fontSize: 20,
             ),
           ),
-
         ),
         body: _isLoading
             ? const Center(child: CircularProgressIndicator())
@@ -75,8 +74,8 @@ class _CartScreenState extends State<CartScreen> {
                     const SizedBox(width: 8),
                     Text(
                       supplierCount > 1
-                          ? '$supplierCount fournisseurs dans votre panier'
-                          : '1 fournisseur dans votre panier',
+                          ? '${supplierCount} ${localizations.suppliersInCart}'
+                          : localizations.oneSupplierInCart,
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
@@ -99,13 +98,14 @@ class _CartScreenState extends State<CartScreen> {
                       entry.value['supplier_name'],
                       entry.value['items'],
                       entry.value['subtotal'],
+                      localizations,
                     );
                   },
                 ),
               ),
 
               // Résumé de la commande
-              _buildCartSummary(supplierCount, itemsBySupplier),
+              _buildCartSummary(supplierCount, itemsBySupplier, localizations),
             ],
           ),
         ),
@@ -143,7 +143,7 @@ class _CartScreenState extends State<CartScreen> {
             ),
             const SizedBox(height: 20),
             Text(
-              'Votre panier est vide',
+              localizations.emptyCart,
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
@@ -152,7 +152,7 @@ class _CartScreenState extends State<CartScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Découvrez nos boutiques et ajoutez des produits',
+              localizations.discoverShops,
               style: TextStyle(
                 fontSize: 14,
                 color: Colors.grey.shade600,
@@ -171,9 +171,9 @@ class _CartScreenState extends State<CartScreen> {
                   borderRadius: BorderRadius.circular(25),
                 ),
               ),
-              child: const Text(
-                'Découvrir les boutiques',
-                style: TextStyle(fontSize: 16),
+              child: Text(
+                localizations.discoverShopsButton,
+                style: const TextStyle(fontSize: 16),
               ),
             ),
           ],
@@ -188,9 +188,8 @@ class _CartScreenState extends State<CartScreen> {
       String supplierName,
       List<CartItem> items,
       double subtotal,
+      AppLocalizations localizations,
       ) {
-    final localizations = AppLocalizations.of(context)!;
-
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
@@ -250,7 +249,7 @@ class _CartScreenState extends State<CartScreen> {
                         ),
                       ),
                       Text(
-                        '${items.length} article(s)',
+                        '${items.length} ${localizations.articleCount}',
                         style: TextStyle(
                           fontSize: 12,
                           color: Colors.grey.shade600,
@@ -281,10 +280,10 @@ class _CartScreenState extends State<CartScreen> {
           // Liste des articles de ce fournisseur
           ...items.map((item) => Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: _buildCartItem(item),
+            child: _buildCartItem(item, localizations),
           )).toList(),
 
-          // Bouton "Voir la boutique" (optionnel)
+          // Bouton "Voir la boutique"
           Padding(
             padding: const EdgeInsets.all(16),
             child: OutlinedButton.icon(
@@ -299,7 +298,7 @@ class _CartScreenState extends State<CartScreen> {
                 );
               },
               icon: const Icon(Icons.store, size: 16),
-              label: const Text('Voir la boutique'),
+              label: Text(localizations.visitShop),
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppColors.primary,
                 side: BorderSide(color: AppColors.primary.withOpacity(0.3)),
@@ -315,11 +314,7 @@ class _CartScreenState extends State<CartScreen> {
   }
 
   // Article individuel
-
-  // lib/screens/commercant/cart_screen.dart
-
-  Widget _buildCartItem(CartItem item) {
-    final localizations = AppLocalizations.of(context)!;
+  Widget _buildCartItem(CartItem item, AppLocalizations localizations) {
     final cartService = Provider.of<CartService>(context, listen: false);
 
     return Row(
@@ -385,10 +380,8 @@ class _CartScreenState extends State<CartScreen> {
 
               const SizedBox(height: 8),
 
-              // 👇 CORRECTION DU DÉBORDEMENT - AJOUTER Expanded
               Row(
                 children: [
-                  // Prix unitaire - Utiliser Flexible
                   Flexible(
                     child: Text(
                       '${item.effectivePrice.toStringAsFixed(2)} ${localizations.currency}',
@@ -406,10 +399,9 @@ class _CartScreenState extends State<CartScreen> {
                     color: Colors.grey.shade300,
                   ),
                   const SizedBox(width: 8),
-                  // Sous-total - Utiliser Flexible
                   Flexible(
                     child: Text(
-                      'Sous-total: ${item.totalPrice.toStringAsFixed(2)} ${localizations.currency}',
+                      '${localizations.subtotal}: ${item.totalPrice.toStringAsFixed(2)} ${localizations.currency}',
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
@@ -469,9 +461,8 @@ class _CartScreenState extends State<CartScreen> {
   }
 
   // Résumé de la commande
-  Widget _buildCartSummary(int supplierCount, Map<int, Map<String, dynamic>> itemsBySupplier) {
+  Widget _buildCartSummary(int supplierCount, Map<int, Map<String, dynamic>> itemsBySupplier, AppLocalizations localizations) {
     final cartService = Provider.of<CartService>(context);
-    final localizations = AppLocalizations.of(context)!;
     final summary = cartService.getCheckoutSummary();
 
     return Container(
@@ -541,7 +532,7 @@ class _CartScreenState extends State<CartScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Sous-total',
+                  localizations.subtotal,
                   style: TextStyle(
                     fontSize: 14,
                     color: Colors.grey.shade700,
@@ -563,7 +554,7 @@ class _CartScreenState extends State<CartScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'TVA (20%)',
+                  localizations.tax,
                   style: TextStyle(
                     fontSize: 14,
                     color: Colors.grey.shade700,
@@ -585,7 +576,7 @@ class _CartScreenState extends State<CartScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Frais de livraison',
+                  localizations.shipping,
                   style: TextStyle(
                     fontSize: 14,
                     color: Colors.grey.shade700,
@@ -609,9 +600,9 @@ class _CartScreenState extends State<CartScreen> {
               children: [
                 Row(
                   children: [
-                    const Text(
-                      'Total',
-                      style: TextStyle(
+                    Text(
+                      localizations.total,
+                      style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 20,
                         color: Color(0xFF2D3A4F),
@@ -625,7 +616,9 @@ class _CartScreenState extends State<CartScreen> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
-                        supplierCount > 1 ? '$supplierCount fournisseurs' : '1 fournisseur',
+                        supplierCount > 1
+                            ? '$supplierCount ${localizations.suppliersCount}'
+                            : localizations.oneSupplier,
                         style: TextStyle(
                           fontSize: 11,
                           color: AppColors.primary,
@@ -669,9 +662,9 @@ class _CartScreenState extends State<CartScreen> {
                   ),
                   elevation: 2,
                 ),
-                child: const Text(
-                  'Passer la commande',
-                  style: TextStyle(
+                child: Text(
+                  localizations.placeOrder,
+                  style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                   ),
@@ -684,7 +677,7 @@ class _CartScreenState extends State<CartScreen> {
               Padding(
                 padding: const EdgeInsets.only(top: 12),
                 child: Text(
-                  '💡 Votre commande sera divisée en $supplierCount commandes distinctes (une par fournisseur)',
+                  '💡 ${localizations.orderSplitMessage} $supplierCount ${localizations.orderSplitMessageEnd}',
                   style: TextStyle(
                     fontSize: 12,
                     color: Colors.orange.shade700,

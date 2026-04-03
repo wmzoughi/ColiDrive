@@ -106,7 +106,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (!_acceptTerms) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Vous devez accepter les conditions'),
+          content: Text(localizations.acceptTermsError),
           backgroundColor: AppColors.error,
         ),
       );
@@ -130,7 +130,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
         userData['siret'] = _siretController.text.trim();
       }
 
-
       final authService = Provider.of<AuthService>(context, listen: false);
       final result = await authService.sendVerificationCode(userData);
 
@@ -144,7 +143,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Code de vérification envoyé à ${_emailController.text}'),
+            content: Text('${localizations.codeSentTo} ${_emailController.text}'),
             backgroundColor: AppColors.success,
             duration: const Duration(seconds: 3),
           ),
@@ -156,7 +155,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(result['message'] ?? 'Erreur lors de l\'envoi'),
+            content: Text(result['message'] ?? localizations.error),
             backgroundColor: AppColors.error,
           ),
         );
@@ -165,6 +164,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   Future<void> _verifyCode() async {
+    final localizations = AppLocalizations.of(context)!;
     final code = _codeControllers.map((c) => c.text).join();
 
     if (code.length != 6) return;
@@ -176,7 +176,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       // ✅ Message de succès
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Inscription réussie ! Vous pouvez maintenant vous connecter.'),
+          content: Text(localizations.registrationSuccess),
           backgroundColor: AppColors.success,
           duration: const Duration(seconds: 3),
         ),
@@ -196,7 +196,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(result['message'] ?? 'Code invalide'),
+          content: Text(result['message'] ?? localizations.invalidCode),
           backgroundColor: AppColors.error,
         ),
       );
@@ -210,6 +210,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   Future<void> _resendCode() async {
+    final localizations = AppLocalizations.of(context)!;
+
     if (!_canResend) return;
 
     final authService = Provider.of<AuthService>(context, listen: false);
@@ -219,14 +221,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
       _startResendTimer();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Nouveau code envoyé'),
+          content: Text(localizations.newCodeSent),
           backgroundColor: AppColors.success,
         ),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(result['message'] ?? 'Erreur'),
+          content: Text(result['message'] ?? localizations.error),
           backgroundColor: AppColors.error,
         ),
       );
@@ -259,7 +261,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           onPressed: _showVerification ? _goBackToForm : () => Navigator.pop(context),
         ),
         title: Text(
-          _showVerification ? 'Vérification' : localizations.registerButton,
+          _showVerification ? localizations.verification : localizations.registerButton,
           style: TextStyle(
             color: AppColors.textDark,
             fontWeight: FontWeight.bold,
@@ -268,7 +270,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
-        child: _showVerification ? _buildVerificationSection(context) : _buildRegistrationForm(context, authService, languageService, localizations),
+        child: _showVerification ? _buildVerificationSection(context, localizations) : _buildRegistrationForm(context, authService, languageService, localizations),
       ),
     );
   }
@@ -361,7 +363,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             children: [
               Expanded(
                 child: ChoiceChip(
-                  label: const Text('Commerçant'),
+                  label: Text(localizations.merchant),
                   selected: _userType == 'commercant',
                   onSelected: (selected) {
                     setState(() {
@@ -377,7 +379,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               const SizedBox(width: 12),
               Expanded(
                 child: ChoiceChip(
-                  label: const Text('Fournisseur'),
+                  label: Text(localizations.supplier),
                   selected: _userType == 'fournisseur',
                   onSelected: (selected) {
                     setState(() {
@@ -408,7 +410,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             ),
             validator: (value) {
               if (value == null || value.isEmpty) {
-                return localizations.emailRequired;
+                return localizations.fieldRequired;
               }
               return null;
             },
@@ -459,7 +461,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             ),
             validator: (value) {
               if (value == null || value.isEmpty) {
-                return localizations.emailRequired;
+                return localizations.fieldRequired;
               }
               return null;
             },
@@ -482,7 +484,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             ),
             validator: (value) {
               if (value == null || value.isEmpty) {
-                return localizations.emailRequired;
+                return localizations.fieldRequired;
               }
               return null;
             },
@@ -490,7 +492,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           const SizedBox(height: 16),
 
           if (_userType == 'commercant') ...[
-            _buildLabel('SIRET *'),
+            _buildLabel('${localizations.siret} *'),
             const SizedBox(height: 8),
             TextFormField(
               controller: _siretController,
@@ -498,7 +500,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               maxLength: 14,
               textDirection: languageService.isArabic ? TextDirection.rtl : TextDirection.ltr,
               decoration: InputDecoration(
-                hintText: '14 chiffres',
+                hintText: localizations.siretHint,
                 prefixIcon: Icon(Icons.badge_outlined, color: AppColors.primary),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
@@ -507,10 +509,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
               validator: (value) {
                 if (_userType == 'commercant' && (value == null || value.isEmpty)) {
-                  return localizations.emailRequired;
+                  return localizations.fieldRequired;
                 }
                 if (value != null && value.isNotEmpty && value.length != 14) {
-                  return localizations.invalidEmail;
+                  return localizations.siretInvalid;
                 }
                 return null;
               },
@@ -549,7 +551,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 return localizations.passwordRequired;
               }
               if (value.length < 8) {
-                return 'Minimum 8 caractères';
+                return localizations.passwordMinLength;
               }
               return null;
             },
@@ -585,7 +587,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 return localizations.passwordRequired;
               }
               if (value != _passwordController.text) {
-                return 'Les mots de passe ne correspondent pas';
+                return localizations.passwordsDoNotMatch;
               }
               return null;
             },
@@ -612,7 +614,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     });
                   },
                   child: Text(
-                    "J'accepte les conditions d'utilisation",
+                    localizations.acceptTerms,
                     style: TextStyle(
                       color: Colors.grey.shade700,
                       decoration: TextDecoration.underline,
@@ -626,7 +628,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           const SizedBox(height: 24),
 
           CustomButton(
-            text: 'Continuer',
+            text: localizations.continueText,
             onPressed: _sendVerificationCode,
             isLoading: authService.isLoading,
           ),
@@ -638,13 +640,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
-                  'Déjà un compte ? ',
+                  localizations.alreadyHaveAccount,
                   style: TextStyle(color: Colors.grey.shade600),
                 ),
                 GestureDetector(
                   onTap: () => Navigator.pop(context),
                   child: Text(
-                    'Se connecter',
+                    localizations.login,
                     style: TextStyle(
                       color: AppColors.primary,
                       fontWeight: FontWeight.bold,
@@ -661,7 +663,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  Widget _buildVerificationSection(BuildContext context) {
+  Widget _buildVerificationSection(BuildContext context, AppLocalizations localizations) {
     return Column(
       children: [
         const SizedBox(height: 20),
@@ -680,7 +682,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         ),
         const SizedBox(height: 24),
         Text(
-          'Vérifiez votre email',
+          localizations.checkYourEmail,
           style: TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.bold,
@@ -689,7 +691,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         ),
         const SizedBox(height: 12),
         Text(
-          'Nous avons envoyé un code à 6 chiffres à',
+          localizations.codeSentDescription,
           textAlign: TextAlign.center,
           style: TextStyle(color: Colors.grey.shade600, fontSize: 16),
         ),
@@ -737,7 +739,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         const SizedBox(height: 24),
 
         CustomButton(
-          text: 'Vérifier',
+          text: localizations.verify,
           onPressed: _verifyCode,
           isLoading: Provider.of<AuthService>(context).isLoading,
         ),
@@ -747,13 +749,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              'Code non reçu ? ',
+              localizations.codeNotReceived,
               style: TextStyle(color: Colors.grey.shade600),
             ),
             GestureDetector(
               onTap: _canResend ? _resendCode : null,
               child: Text(
-                _canResend ? 'Renvoyer' : 'Renvoyer dans $_resendSeconds s',
+                _canResend
+                    ? localizations.resendCode
+                    : '${localizations.resendIn} $_resendSeconds ${localizations.seconds}',
                 style: TextStyle(
                   color: _canResend ? AppColors.primary : Colors.grey.shade400,
                   fontWeight: FontWeight.bold,

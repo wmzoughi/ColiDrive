@@ -70,6 +70,24 @@ class _SupplierProductsScreenState extends State<SupplierProductsScreen> {
     }
   }
 
+  String _getProductCountText(int count, AppLocalizations localizations) {
+    if (count == 0) {
+      return '0 ${localizations.products}';
+    } else if (count == 1) {
+      return '1 ${localizations.product}';
+    } else {
+      return '$count ${localizations.products}';
+    }
+  }
+
+  String _getCartText(int totalItems, AppLocalizations localizations) {
+    if (totalItems == 0) {
+      return localizations.cart;
+    } else {
+      return '${localizations.cart} ($totalItems)';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final localizations = AppLocalizations.of(context)!;
@@ -94,7 +112,7 @@ class _SupplierProductsScreenState extends State<SupplierProductsScreen> {
               ),
             ),
             Text(
-              '${_products.length} produits',
+              _getProductCountText(_products.length, localizations),
               style: TextStyle(
                 fontSize: 12,
                 color: Colors.grey.shade600,
@@ -139,7 +157,7 @@ class _SupplierProductsScreenState extends State<SupplierProductsScreen> {
         label: Consumer<CartService>(
           builder: (context, cartService, child) {
             int totalItems = cartService.totalItems;
-            return Text('Panier${totalItems > 0 ? ' ($totalItems)' : ''}');
+            return Text(_getCartText(totalItems, localizations));
           },
         ),
         backgroundColor: AppColors.greyLight,

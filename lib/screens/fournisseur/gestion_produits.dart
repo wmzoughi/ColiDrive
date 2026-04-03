@@ -1,4 +1,5 @@
 // lib/screens/fournisseur/gestion_produits.dart
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../services/product_service.dart';
@@ -11,6 +12,7 @@ import 'add_edit_product_screen.dart';
 import '../../widgets/product_image.dart';
 import 'compte_screen.dart';
 import 'packaging_management_screen.dart';
+
 
 class GestionProduitsScreen extends StatefulWidget {
   const GestionProduitsScreen({Key? key}) : super(key: key);
@@ -114,7 +116,6 @@ class _GestionProduitsScreenState extends State<GestionProduitsScreen> {
             icon: const Icon(Icons.qr_code_scanner, color: Color(0xFF2D3A4F)),
             onPressed: () {
               // Navigation vers l'écran de scan
-              // À implémenter si nécessaire
             },
           ),
         ],
@@ -410,7 +411,7 @@ class _GestionProduitsScreenState extends State<GestionProduitsScreen> {
                   borderRadius: BorderRadius.circular(8),
                   child: ProductImage(
                     productId: product.id,
-                    imageUrl: product.imageUrl,
+                    imageUrl: product.mainImageUrl,
                     width: 70,
                     height: 70,
                     fit: BoxFit.cover,
@@ -423,7 +424,6 @@ class _GestionProduitsScreenState extends State<GestionProduitsScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Nom du produit
                       Text(
                         product.name,
                         style: const TextStyle(
@@ -435,8 +435,6 @@ class _GestionProduitsScreenState extends State<GestionProduitsScreen> {
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 4),
-
-                      // Code produit
                       if (product.defaultCode != null)
                         Text(
                           'Réf: ${product.defaultCode}',
@@ -445,8 +443,6 @@ class _GestionProduitsScreenState extends State<GestionProduitsScreen> {
                             fontSize: 11,
                           ),
                         ),
-
-                      // 👇 CODE-BARRES (AJOUTÉ)
                       if (product.barcode != null && product.barcode!.isNotEmpty)
                         Padding(
                           padding: const EdgeInsets.only(top: 2),
@@ -473,10 +469,7 @@ class _GestionProduitsScreenState extends State<GestionProduitsScreen> {
                             ],
                           ),
                         ),
-
                       const SizedBox(height: 8),
-
-                      // Conditionnement
                       if (product.packaging != null)
                         Text(
                           product.packaging!,
@@ -485,10 +478,7 @@ class _GestionProduitsScreenState extends State<GestionProduitsScreen> {
                             fontSize: 11,
                           ),
                         ),
-
                       const SizedBox(height: 4),
-
-                      // Stock
                       Row(
                         children: [
                           Icon(
@@ -519,7 +509,6 @@ class _GestionProduitsScreenState extends State<GestionProduitsScreen> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    // Prix
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
@@ -543,11 +532,8 @@ class _GestionProduitsScreenState extends State<GestionProduitsScreen> {
                       ],
                     ),
                     const SizedBox(height: 12),
-
-                    // Boutons d'action
                     Row(
                       children: [
-                        // 👇 NOUVEAU BOUTON CONDITIONNEMENTS
                         Container(
                           decoration: BoxDecoration(
                             color: Colors.orange.withOpacity(0.1),
@@ -569,7 +555,6 @@ class _GestionProduitsScreenState extends State<GestionProduitsScreen> {
                           ),
                         ),
                         const SizedBox(width: 8),
-                        // Bouton Éditer
                         Container(
                           decoration: BoxDecoration(
                             color: Colors.blue.withOpacity(0.1),
@@ -595,8 +580,6 @@ class _GestionProduitsScreenState extends State<GestionProduitsScreen> {
                           ),
                         ),
                         const SizedBox(width: 8),
-
-                        // Bouton Supprimer
                         Container(
                           decoration: BoxDecoration(
                             color: Colors.red.withOpacity(0.1),
@@ -629,7 +612,7 @@ class _GestionProduitsScreenState extends State<GestionProduitsScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('Supprimer le produit'),
+          title: const Text('Supprimer le produit'),
           content: Text('Voulez-vous vraiment supprimer "${product.name}" ?'),
           actions: [
             TextButton(
@@ -642,14 +625,14 @@ class _GestionProduitsScreenState extends State<GestionProduitsScreen> {
                 final success = await service.deleteProduct(product.id);
                 if (success && mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
+                    const SnackBar(
                       content: Text('Produit supprimé avec succès'),
                       backgroundColor: AppColors.success,
                     ),
                   );
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
+                    const SnackBar(
                       content: Text('Erreur lors de la suppression'),
                       backgroundColor: AppColors.error,
                     ),

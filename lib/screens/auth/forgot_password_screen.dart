@@ -264,7 +264,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           ),
           const SizedBox(height: 30),
           CustomButton(
-            text: 'Envoyer le code',
+            text: localizations.sendCode,
             onPressed: _sendResetCode,
             isLoading: false,
           ),

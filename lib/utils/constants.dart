@@ -16,6 +16,8 @@ class AppColors {
 
 class AppConstants {
   static const String appName = 'ColiDrive';
-  //static const String baseUrl = 'http://10.0.2.2:8000/api';
-  static const String baseUrl = 'http://192.168.0.128:8000/api';
+  //static const String baseUrl = 'http://192.168.0.128:8000/api';
+  static const String baseUrl = 'http://srv632477.hstgr.cloud:8081/api';
+  // 👈 AJOUTER CETTE LIGNE (remplacez par votre clé Stripe)
+  static const String stripePublishableKey = 'pk_test_51TEsqB9v0uDwW1YApuQKgkiV5buknS5BwYmhd2OYW3jFyHHwr25mBk3EkrJPt1vC9IH5EZwrCKtXtJyf2AofgNqn00dlw8Ymxm';
 }

@@ -61,9 +61,10 @@ class _ProductReviewsScreenState extends State<ProductReviewsScreen> {
   Future<void> _checkUserReview() async {
     final authService = Provider.of<AuthService>(context, listen: false);
     final reviewService = Provider.of<ReviewService>(context, listen: false);
+    final localizations = AppLocalizations.of(context)!;
 
     if (!authService.isAuthenticated) {
-      _showLoginDialog();
+      _showLoginDialog(localizations);
       return;
     }
 
@@ -75,7 +76,7 @@ class _ProductReviewsScreenState extends State<ProductReviewsScreen> {
         MaterialPageRoute(
           builder: (context) => AddReviewScreen(
             supplierId: widget.product.supplierId!,
-            supplierName: widget.product.supplierName ?? 'Fournisseur',
+            supplierName: widget.product.supplierName ?? localizations.supplier,
             existingReview: result['review'],
           ),
         ),
@@ -83,16 +84,16 @@ class _ProductReviewsScreenState extends State<ProductReviewsScreen> {
     }
   }
 
-  void _showLoginDialog() {
+  void _showLoginDialog(AppLocalizations localizations) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Connexion requise'),
-        content: const Text('Vous devez être connecté pour laisser un avis.'),
+        title: Text(localizations.loginRequired),
+        content: Text(localizations.loginRequiredMessage),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Annuler'),
+            child: Text(localizations.cancel),
           ),
           ElevatedButton(
             onPressed: () {
@@ -102,11 +103,21 @@ class _ProductReviewsScreenState extends State<ProductReviewsScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
             ),
-            child: const Text('Se connecter'),
+            child: Text(localizations.login),
           ),
         ],
       ),
     );
+  }
+
+  String _getReviewsCountText(int count, AppLocalizations localizations) {
+    if (count == 0) {
+      return '0 ${localizations.reviews}';
+    } else if (count == 1) {
+      return '1 ${localizations.review}';
+    } else {
+      return '$count ${localizations.reviews}';
+    }
   }
 
   @override
@@ -131,7 +142,7 @@ class _ProductReviewsScreenState extends State<ProductReviewsScreen> {
               ),
             ),
             Text(
-              'Avis sur ce produit',
+              localizations.reviewsOnThisProduct,
               style: TextStyle(
                 fontSize: 12,
                 color: Colors.grey.shade600,
@@ -153,7 +164,7 @@ class _ProductReviewsScreenState extends State<ProductReviewsScreen> {
       body: reviewService.isLoading && reviewService.supplierReviews == null
           ? const Center(child: CircularProgressIndicator())
           : reviewService.supplierReviews == null
-          ? _buildErrorState(reviewService)
+          ? _buildErrorState(reviewService, localizations)
           : RefreshIndicator(
         onRefresh: () => _loadReviews(reset: true),
         child: CustomScrollView(
@@ -161,12 +172,12 @@ class _ProductReviewsScreenState extends State<ProductReviewsScreen> {
           slivers: [
             // En-tête du produit
             SliverToBoxAdapter(
-              child: _buildProductHeader(),
+              child: _buildProductHeader(localizations),
             ),
 
             // En-tête des statistiques
             SliverToBoxAdapter(
-              child: _buildStatsHeader(reviewService.supplierReviews!.supplier),
+              child: _buildStatsHeader(reviewService.supplierReviews!.supplier, localizations),
             ),
 
             // Liste des avis
@@ -192,7 +203,7 @@ class _ProductReviewsScreenState extends State<ProductReviewsScreen> {
     );
   }
 
-  Widget _buildProductHeader() {
+  Widget _buildProductHeader(AppLocalizations localizations) {
     return Container(
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(16),
@@ -207,10 +218,9 @@ class _ProductReviewsScreenState extends State<ProductReviewsScreen> {
           ),
         ],
       ),
-
       child: Row(
         children: [
-          // Image du produit - ✅ Utilisez ProductImage
+          // Image du produit
           ClipRRect(
             borderRadius: BorderRadius.circular(8),
             child: ProductImage(
@@ -235,7 +245,7 @@ class _ProductReviewsScreenState extends State<ProductReviewsScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  widget.product.supplierName ?? 'Fournisseur',
+                  widget.product.supplierName ?? localizations.supplier,
                   style: TextStyle(
                     fontSize: 13,
                     color: Colors.grey[600],
@@ -243,7 +253,7 @@ class _ProductReviewsScreenState extends State<ProductReviewsScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '${widget.product.currentPrice.toStringAsFixed(2)} MAD',
+                  '${widget.product.currentPrice.toStringAsFixed(2)} ${localizations.currency}',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     color: AppColors.primary,
@@ -257,7 +267,7 @@ class _ProductReviewsScreenState extends State<ProductReviewsScreen> {
     );
   }
 
-  Widget _buildStatsHeader(SupplierInfo supplier) {
+  Widget _buildStatsHeader(SupplierInfo supplier, AppLocalizations localizations) {
     return Container(
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(20),
@@ -299,7 +309,7 @@ class _ProductReviewsScreenState extends State<ProductReviewsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    '${supplier.reviewsCount} avis',
+                    _getReviewsCountText(supplier.reviewsCount, localizations),
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
@@ -307,7 +317,7 @@ class _ProductReviewsScreenState extends State<ProductReviewsScreen> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Note globale',
+                    localizations.overallRating,
                     style: TextStyle(
                       fontSize: 12,
                       color: Colors.grey.shade600,
@@ -474,7 +484,7 @@ class _ProductReviewsScreenState extends State<ProductReviewsScreen> {
     );
   }
 
-  Widget _buildErrorState(ReviewService reviewService) {
+  Widget _buildErrorState(ReviewService reviewService, AppLocalizations localizations) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -486,7 +496,7 @@ class _ProductReviewsScreenState extends State<ProductReviewsScreen> {
           ),
           const SizedBox(height: 16),
           Text(
-            'Erreur de chargement',
+            localizations.loadingError,
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -495,7 +505,7 @@ class _ProductReviewsScreenState extends State<ProductReviewsScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            reviewService.error ?? 'Une erreur est survenue',
+            reviewService.error ?? localizations.errorOccurred,
             style: TextStyle(color: Colors.grey.shade600),
           ),
           const SizedBox(height: 24),
@@ -504,7 +514,7 @@ class _ProductReviewsScreenState extends State<ProductReviewsScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
             ),
-            child: const Text('Réessayer'),
+            child: Text(localizations.retry),
           ),
         ],
       ),

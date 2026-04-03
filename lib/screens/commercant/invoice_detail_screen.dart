@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../services/invoice_service.dart';
 import '../../utils/constants.dart';
+import '../../l10n/app_localizations.dart';
 import 'package:open_file/open_file.dart';
 
 class InvoiceDetailScreen extends StatefulWidget {
@@ -39,6 +40,7 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
 
   Future<void> _downloadPdf() async {
     if (_isDownloading) return;
+    final localizations = AppLocalizations.of(context)!;
 
     setState(() => _isDownloading = true);
 
@@ -55,10 +57,10 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('✅ PDF téléchargé avec succès'),
+                  Text('✅ ${localizations.pdfDownloadSuccess}'),
                   const SizedBox(height: 4),
                   Text(
-                    'Chemin: $filePath',
+                    '${localizations.path}: $filePath',
                     style: const TextStyle(fontSize: 10),
                   ),
                 ],
@@ -66,7 +68,7 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
               backgroundColor: Colors.green,
               duration: const Duration(seconds: 5),
               action: SnackBarAction(
-                label: 'OUVRIR',
+                label: localizations.open,
                 textColor: Colors.white,
                 onPressed: () {
                   _openPdf(filePath);
@@ -77,7 +79,7 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('❌ Erreur lors du téléchargement'),
+              content: Text(localizations.pdfDownloadError),
               backgroundColor: Colors.red,
               duration: const Duration(seconds: 2),
             ),
@@ -88,7 +90,7 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('❌ Erreur: ${e.toString()}'),
+            content: Text('${localizations.error}: ${e.toString()}'),
             backgroundColor: Colors.red,
             duration: const Duration(seconds: 3),
           ),
@@ -107,6 +109,7 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
 
   Future<void> _sharePdf() async {
     if (_isDownloading) return;
+    final localizations = AppLocalizations.of(context)!;
 
     setState(() => _isDownloading = true);
 
@@ -117,18 +120,18 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
       if (mounted) {
         if (success) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('✅ PDF prêt à être partagé'),
+            SnackBar(
+              content: Text(localizations.pdfReadyToShare),
               backgroundColor: Colors.green,
-              duration: Duration(seconds: 2),
+              duration: const Duration(seconds: 2),
             ),
           );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('❌ Erreur lors du partage'),
+            SnackBar(
+              content: Text(localizations.pdfShareError),
               backgroundColor: Colors.red,
-              duration: Duration(seconds: 2),
+              duration: const Duration(seconds: 2),
             ),
           );
         }
@@ -137,7 +140,7 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('❌ Erreur: ${e.toString()}'),
+            content: Text('${localizations.error}: ${e.toString()}'),
             backgroundColor: Colors.red,
           ),
         );
@@ -149,18 +152,27 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
     }
   }
 
+  String _getPaymentStatusText(String status, AppLocalizations localizations) {
+    return status == 'paid' ? localizations.invoice_paid : localizations.invoice_pending;
+  }
+
+  Color _getPaymentStatusColor(String status) {
+    return status == 'paid' ? Colors.green : Colors.orange;
+  }
+
   @override
   Widget build(BuildContext context) {
     final service = Provider.of<InvoiceService>(context);
+    final localizations = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        title: const Text(
-          'Détail facture',
-          style: TextStyle(
+        title: Text(
+          localizations.invoice_details,
+          style: const TextStyle(
             color: Color(0xFF2D3A4F),
             fontWeight: FontWeight.bold,
           ),
@@ -230,13 +242,13 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
                           vertical: 6,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.green.withOpacity(0.1),
+                          color: _getPaymentStatusColor(service.currentInvoice!.paymentStatus).withOpacity(0.1),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
-                          service.currentInvoice!.paymentStatus,
+                          _getPaymentStatusText(service.currentInvoice!.paymentStatus, localizations),
                           style: TextStyle(
-                            color: Colors.green.shade700,
+                            color: _getPaymentStatusColor(service.currentInvoice!.paymentStatus),
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -251,7 +263,7 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Date',
+                            localizations.invoice_date,
                             style: TextStyle(
                               fontSize: 12,
                               color: Colors.grey.shade600,
@@ -270,7 +282,7 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
                           Text(
-                            'Total',
+                            localizations.invoice_total,
                             style: TextStyle(
                               fontSize: 12,
                               color: Colors.grey.shade600,
@@ -316,9 +328,9 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
                     children: [
                       Icon(Icons.person_outline, color: AppColors.primary, size: 20),
                       const SizedBox(width: 8),
-                      const Text(
-                        'Client',
-                        style: TextStyle(
+                      Text(
+                        localizations.invoice_customer,
+                        style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
@@ -367,9 +379,9 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
                     children: [
                       Icon(Icons.shopping_bag_outlined, color: AppColors.primary, size: 20),
                       const SizedBox(width: 8),
-                      const Text(
-                        'Articles',
-                        style: TextStyle(
+                      Text(
+                        localizations.invoice_items,
+                        style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
@@ -391,7 +403,7 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
                         Expanded(
                           flex: 3,
                           child: Text(
-                            'Produit',
+                            localizations.product,
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               color: Colors.grey.shade700,
@@ -400,7 +412,7 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
                         ),
                         Expanded(
                           child: Text(
-                            'Qté',
+                            localizations.invoice_quantity,
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               color: Colors.grey.shade700,
@@ -410,7 +422,7 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
                         ),
                         Expanded(
                           child: Text(
-                            'Prix',
+                            localizations.invoice_price,
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               color: Colors.grey.shade700,
@@ -420,7 +432,7 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
                         ),
                         Expanded(
                           child: Text(
-                            'Total',
+                            localizations.invoice_total,
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               color: Colors.grey.shade700,
@@ -454,7 +466,7 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
                                 ),
                                 if (item['sku'] != null && item['sku'] != 'N/A')
                                   Text(
-                                    'Réf: ${item['sku']}',
+                                    '${localizations.reference}: ${item['sku']}',
                                     style: TextStyle(
                                       fontSize: 11,
                                       color: Colors.grey.shade600,
@@ -471,13 +483,13 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
                           ),
                           Expanded(
                             child: Text(
-                              '${item['price']} MAD',
+                              '${item['price']} ${localizations.currency}',
                               textAlign: TextAlign.right,
                             ),
                           ),
                           Expanded(
                             child: Text(
-                              '${item['subtotal']} MAD',
+                              '${item['subtotal']} ${localizations.currency}',
                               textAlign: TextAlign.right,
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
@@ -500,7 +512,7 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text('Sous-total'),
+                            Text(localizations.invoice_subtotal),
                             Text(service.currentInvoice!.formattedSubtotal),
                           ],
                         ),
@@ -508,7 +520,7 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text('TVA (20%)'),
+                            Text(localizations.invoice_tax),
                             Text(service.currentInvoice!.formattedTax),
                           ],
                         ),
@@ -516,7 +528,7 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text('Livraison'),
+                            Text(localizations.invoice_shipping),
                             Text(service.currentInvoice!.formattedShipping),
                           ],
                         ),
@@ -524,9 +536,9 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text(
-                              'Total TTC',
-                              style: TextStyle(
+                            Text(
+                              localizations.invoice_grand_total,
+                              style: const TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 16,
                               ),
@@ -563,7 +575,7 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                         : const Icon(Icons.download),
-                    label: const Text('Télécharger'),
+                    label: Text(localizations.download_pdf),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.primary,
                       side: BorderSide(color: AppColors.primary),
@@ -582,7 +594,7 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                         : const Icon(Icons.share),
-                    label: const Text('Partager'),
+                    label: Text(localizations.share_pdf),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
                       foregroundColor: Colors.white,
@@ -600,7 +612,6 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
 
   @override
   void dispose() {
-    // Nettoyer les ressources si nécessaire
     super.dispose();
   }
 }

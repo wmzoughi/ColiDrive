@@ -1,4 +1,3 @@
-// lib/services/auth_service.dart
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -9,6 +8,7 @@ import 'cart_service.dart';
 import 'order_service.dart';
 import 'dashboard_service.dart';
 import 'notification_service.dart';
+import 'push_notification_service.dart';
 
 class AuthService extends ChangeNotifier {
   User? _currentUser;
@@ -21,6 +21,7 @@ class AuthService extends ChangeNotifier {
   OrderService? _orderService;
   DashboardService? _dashboardService;
   NotificationService? _notificationService;
+  PushNotificationService? _pushNotificationService;
 
   User? get currentUser => _currentUser;
   String? get token => _token;
@@ -42,6 +43,10 @@ class AuthService extends ChangeNotifier {
 
   void setNotificationService(NotificationService notificationService) {
     _notificationService = notificationService;
+  }
+
+  void setPushNotificationService(PushNotificationService pushNotificationService) {
+    _pushNotificationService = pushNotificationService;
   }
 
   Map<String, String> get _headers => {
@@ -114,12 +119,15 @@ class AuthService extends ChangeNotifier {
           print('🔄 Rechargement du dashboard après login...');
           await _dashboardService!.loadDashboardData();
         }
+
         if (_notificationService != null) {
           print('🔔 Chargement des notifications après login...');
           await _notificationService!.loadNotifications(reset: true);
           _notificationService!.startListening();
         }
 
+        // ✅ NOTIFIER LES ÉCOUTEURS APRÈS CONNEXION RÉUSSIE
+        notifyListeners();
 
         _setLoading(false);
         return true;
@@ -136,8 +144,6 @@ class AuthService extends ChangeNotifier {
     }
   }
 
-
-// ÉTAPE 1 : Envoyer le code de vérification
   Future<Map<String, dynamic>> sendVerificationCode(Map<String, dynamic> userData) async {
     _setLoading(true);
     _clearError();
@@ -152,7 +158,7 @@ class AuthService extends ChangeNotifier {
         headers['X-Session-ID'] = sessionId;
       }
 
-      print('📤 Envoi des données: ${json.encode(userData)}'); // LOG IMPORTANT
+      print('📤 Envoi des données: ${json.encode(userData)}');
 
       final response = await http.post(
         Uri.parse('${AppConstants.baseUrl}/auth/send-verification-code'),
@@ -163,7 +169,6 @@ class AuthService extends ChangeNotifier {
       print('📥 Statut: ${response.statusCode}');
       print('📥 Réponse: ${response.body}');
 
-      // Vérifier si la réponse est du HTML (erreur 500)
       if (response.body.trim().startsWith('<!DOCTYPE')) {
         print('❌ Erreur HTML reçue');
         _setLoading(false);
@@ -185,7 +190,6 @@ class AuthService extends ChangeNotifier {
       } else {
         _setLoading(false);
 
-        // Message d'erreur plus précis
         String errorMessage = data['message'] ?? 'Erreur lors de l\'envoi';
         if (data['errors'] != null) {
           final errors = data['errors'] as Map;
@@ -212,7 +216,7 @@ class AuthService extends ChangeNotifier {
       };
     }
   }
-  // ÉTAPE 2 : Vérifier le code et finaliser l'inscription
+
   Future<Map<String, dynamic>> verifyCodeAndRegister(String email, String code) async {
     _setLoading(true);
     _clearError();
@@ -251,6 +255,8 @@ class AuthService extends ChangeNotifier {
           _notificationService!.startListening();
         }
 
+        // ✅ NOTIFIER LES ÉCOUTEURS APRÈS INSCRIPTION RÉUSSIE
+        notifyListeners();
 
         _setLoading(false);
         return {'success': true, 'message': data['message']};
@@ -271,7 +277,6 @@ class AuthService extends ChangeNotifier {
     }
   }
 
-  // ÉTAPE 3 : Renvoyer le code
   Future<Map<String, dynamic>> resendCode(String email) async {
     _setLoading(true);
     _clearError();
@@ -300,8 +305,6 @@ class AuthService extends ChangeNotifier {
     }
   }
 
-
-// ÉTAPE 1 : Demander un code de réinitialisation
   Future<Map<String, dynamic>> forgotPassword(String email) async {
     _setLoading(true);
     _clearError();
@@ -338,7 +341,6 @@ class AuthService extends ChangeNotifier {
     }
   }
 
-// ÉTAPE 2 : Vérifier le code
   Future<Map<String, dynamic>> verifyResetCode(String email, String code) async {
     _setLoading(true);
     _clearError();
@@ -373,10 +375,9 @@ class AuthService extends ChangeNotifier {
     }
   }
 
-// ÉTAPE 3 : Réinitialiser le mot de passe
   Future<Map<String, dynamic>> resetPassword({
     required String email,
-    required String code,  // ← Utiliser 'code' au lieu de 'token'
+    required String code,
     required String password,
     required String passwordConfirmation,
   }) async {
@@ -391,7 +392,7 @@ class AuthService extends ChangeNotifier {
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'email': email,
-          'code': code,  // ← Envoyer le code
+          'code': code,
           'password': password,
           'password_confirmation': passwordConfirmation,
         }),
@@ -400,7 +401,6 @@ class AuthService extends ChangeNotifier {
       print('📥 Statut: ${response.statusCode}');
       print('📥 Réponse: ${response.body}');
 
-      // Vérifier si la réponse est du HTML (erreur 500)
       if (response.body.trim().startsWith('<!DOCTYPE')) {
         print('❌ Erreur HTML reçue - vérifiez les logs Laravel');
         _setLoading(false);
@@ -433,12 +433,16 @@ class AuthService extends ChangeNotifier {
       };
     }
   }
-  // ✅ VERSION FINALE DE LA DÉCONNEXION
+
   Future<void> logout() async {
     _setLoading(true);
 
     try {
-      // 1. Appel API de déconnexion (optionnel)
+      // ✅ Réinitialiser le service de notifications push
+      if (_pushNotificationService != null) {
+        await PushNotificationService.reset();
+      }
+
       if (_token != null) {
         try {
           await http.post(
@@ -451,51 +455,37 @@ class AuthService extends ChangeNotifier {
         }
       }
 
-      // 2. ✅ NETTOYAGE LOCAL COMPLET
       _token = null;
       _currentUser = null;
 
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('auth_token');
       await prefs.remove('user_data');
-      await prefs.remove('cart_session_id');  // ✅ SESSION PANIER SUPPRIMÉE
+      await prefs.remove('cart_session_id');
 
       print('✅ Préférences locales nettoyées');
 
-      // 3. ✅ VIDER LE PANIER LOCAL
       if (_cartService != null) {
         _cartService!.clearLocalCart();
         print('✅ Panier local vidé');
       }
 
-      // 4. ✅ RÉINITIALISER LES AUTRES SERVICES
-      if (_orderService != null) {
-        // Optionnel: réinitialiser les commandes
-      }
-
-      if (_dashboardService != null) {
-        // Optionnel: réinitialiser le dashboard
-      }
       if (_notificationService != null) {
         _notificationService!.clearLocalNotifications();
         print('✅ Notifications locales vidées');
       }
-
 
       _setLoading(false);
       print('🎉 Déconnexion complète réussie');
 
     } catch (e) {
       print('💥 Erreur critique lors de la déconnexion: $e');
-      // En cas d'erreur, on force quand même la déconnexion locale
       _token = null;
       _currentUser = null;
     } finally {
       notifyListeners();
     }
   }
-
-
 
   Future<void> _saveAuthData(Map<String, dynamic> data) async {
     _token = data['access_token'];

@@ -108,12 +108,11 @@ class _DashboardCommercantState extends State<DashboardCommercant> {
                 },
               ),
               const SizedBox(width: 8),
-
             ],
           ),
           actions: [
             InvoiceBadge(color: const Color(0xFF2D3A4F)),
-            NotificationIcon(color: const Color(0xFF2D3A4F)), // 👈 AJOUTEZ ICI
+            NotificationIcon(color: const Color(0xFF2D3A4F)),
             IconButton(
               icon: CartIconWithBadge(),
               onPressed: () => Navigator.pushNamed(context, '/merchant/cart'),
@@ -142,7 +141,7 @@ class _DashboardCommercantState extends State<DashboardCommercant> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Prêt à faire vos achats ?',
+                  localizations.readyToShop,
                   style: TextStyle(
                     fontSize: 14,
                     color: Colors.grey.shade600,
@@ -181,17 +180,17 @@ class _DashboardCommercantState extends State<DashboardCommercant> {
                 const SizedBox(height: 24),
 
                 // Section Fournisseurs
-                _buildSuppliersSection(),
+                _buildSuppliersSection(localizations),
 
                 const SizedBox(height: 24),
 
                 // Carte de crédit
-                _buildCreditCard(merchantService),
+                _buildCreditCard(merchantService, localizations),
 
                 const SizedBox(height: 20),
 
                 // Carte des promotions
-                _buildPromoCard(),
+                _buildPromoCard(localizations),
 
                 const SizedBox(height: 24),
 
@@ -199,6 +198,7 @@ class _DashboardCommercantState extends State<DashboardCommercant> {
                 _buildSectionHeader(
                   title: localizations.mostOrderedProducts,
                   onSeeAll: () => Navigator.pushNamed(context, '/merchant/products'),
+                  localizations: localizations,
                 ),
                 const SizedBox(height: 16),
 
@@ -220,7 +220,7 @@ class _DashboardCommercantState extends State<DashboardCommercant> {
                           ),
                           child: SizedBox(
                             width: 150,
-                            child: _buildProductCard(product),
+                            child: _buildProductCard(product, localizations),
                           ),
                         );
                       },
@@ -233,6 +233,7 @@ class _DashboardCommercantState extends State<DashboardCommercant> {
                 _buildSectionHeader(
                   title: localizations.recentOrders,
                   onSeeAll: () => Navigator.pushNamed(context, '/merchant/orders'),
+                  localizations: localizations,
                 ),
                 const SizedBox(height: 16),
 
@@ -244,7 +245,7 @@ class _DashboardCommercantState extends State<DashboardCommercant> {
                   ...merchantService.recentOrders.take(3).map((order) {
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 12),
-                      child: _buildOrderCard(order),
+                      child: _buildOrderCard(order, localizations),
                     );
                   }).toList(),
 
@@ -274,9 +275,7 @@ class _DashboardCommercantState extends State<DashboardCommercant> {
   }
 
   // SECTION FOURNISSEURS
-  Widget _buildSuppliersSection() {
-    final localizations = AppLocalizations.of(context)!;
-
+  Widget _buildSuppliersSection(AppLocalizations localizations) {
     if (_isLoadingSuppliers) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -296,7 +295,7 @@ class _DashboardCommercantState extends State<DashboardCommercant> {
                 const Icon(Icons.store, color: AppColors.primary, size: 20),
                 const SizedBox(width: 8),
                 Text(
-                  'Nos fournisseurs',
+                  localizations.ourSuppliers,
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -383,7 +382,7 @@ class _DashboardCommercantState extends State<DashboardCommercant> {
         const SizedBox(height: 8),
         Center(
           child: Text(
-            '👆 Cliquez sur un fournisseur pour voir ses produits',
+            localizations.clickOnSupplier,
             style: TextStyle(
               fontSize: 12,
               color: Colors.grey.shade600,
@@ -396,8 +395,7 @@ class _DashboardCommercantState extends State<DashboardCommercant> {
   }
 
   // CARTE DE CRÉDIT
-  Widget _buildCreditCard(MerchantService service) {
-    final localizations = AppLocalizations.of(context)!;
+  Widget _buildCreditCard(MerchantService service, AppLocalizations localizations) {
     final creditBalance = service.creditBalance;
     final creditLimit = service.creditLimit;
     final percentage = service.creditUsagePercentage;
@@ -406,6 +404,11 @@ class _DashboardCommercantState extends State<DashboardCommercant> {
       if (percentage > 90) return Colors.red;
       if (percentage > 70) return Colors.orange;
       return Colors.green;
+    }
+
+    String getHealthStatus() {
+      if (percentage > 70) return localizations.healthHigh;
+      return localizations.healthHealthy;
     }
 
     return Container(
@@ -445,7 +448,7 @@ class _DashboardCommercantState extends State<DashboardCommercant> {
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  percentage > 70 ? '⚠️ Élevé' : '✅ Sain',
+                  getHealthStatus(),
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 12,
@@ -527,9 +530,7 @@ class _DashboardCommercantState extends State<DashboardCommercant> {
   }
 
   // CARTE PROMOTION
-  Widget _buildPromoCard() {
-    final localizations = AppLocalizations.of(context)!;
-
+  Widget _buildPromoCard(AppLocalizations localizations) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -572,7 +573,7 @@ class _DashboardCommercantState extends State<DashboardCommercant> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Jusqu\'à -50% sur une sélection de produits',
+                  localizations.promoDescription,
                   style: TextStyle(
                     fontSize: 12,
                     color: Colors.grey.shade600,
@@ -607,7 +608,7 @@ class _DashboardCommercantState extends State<DashboardCommercant> {
   }
 
   // EN-TÊTE DE SECTION
-  Widget _buildSectionHeader({required String title, required VoidCallback onSeeAll}) {
+  Widget _buildSectionHeader({required String title, required VoidCallback onSeeAll, required AppLocalizations localizations}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -642,7 +643,7 @@ class _DashboardCommercantState extends State<DashboardCommercant> {
             foregroundColor: AppColors.primary,
           ),
           child: Text(
-            'Voir tout',
+            localizations.seeAll,
             style: const TextStyle(
               fontWeight: FontWeight.w600,
               fontSize: 13,
@@ -654,10 +655,7 @@ class _DashboardCommercantState extends State<DashboardCommercant> {
   }
 
   // CARTE PRODUIT
-  // lib/screens/commercant/dashboard_commercant.dart
-
-  Widget _buildProductCard(Product product) {
-    final localizations = AppLocalizations.of(context)!;
+  Widget _buildProductCard(Product product, AppLocalizations localizations) {
     final cartService = Provider.of<CartService>(context, listen: false);
 
     return GestureDetector(
@@ -683,7 +681,7 @@ class _DashboardCommercantState extends State<DashboardCommercant> {
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min, // 👈 AJOUTER
+          mainAxisSize: MainAxisSize.min,
           children: [
             // Image
             ClipRRect(
@@ -702,7 +700,7 @@ class _DashboardCommercantState extends State<DashboardCommercant> {
               padding: const EdgeInsets.all(10),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min, // 👈 AJOUTER
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   // Nom du produit
                   Text(
@@ -711,7 +709,7 @@ class _DashboardCommercantState extends State<DashboardCommercant> {
                       fontWeight: FontWeight.bold,
                       fontSize: 13,
                     ),
-                    maxLines: 2, // 👈 CHANGER maxLines à 2
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 4),
@@ -770,7 +768,7 @@ class _DashboardCommercantState extends State<DashboardCommercant> {
                         cartService.addToCart(product, quantity: 1);
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: Text('${product.name} ajouté au panier'),
+                            content: Text('${product.name} ${localizations.addedToCart}'),
                             backgroundColor: Colors.green,
                             duration: const Duration(seconds: 1),
                           ),
@@ -784,9 +782,9 @@ class _DashboardCommercantState extends State<DashboardCommercant> {
                           borderRadius: BorderRadius.circular(6),
                         ),
                       ),
-                      child: const Text(
-                        'Ajouter',
-                        style: TextStyle(fontSize: 11),
+                      child: Text(
+                        localizations.add,
+                        style: const TextStyle(fontSize: 11),
                       ),
                     ),
                   ),
@@ -800,9 +798,7 @@ class _DashboardCommercantState extends State<DashboardCommercant> {
   }
 
   // CARTE COMMANDE
-  Widget _buildOrderCard(Order order) {
-    final localizations = AppLocalizations.of(context)!;
-
+  Widget _buildOrderCard(Order order, AppLocalizations localizations) {
     Color getStatusColor() {
       switch (order.status) {
         case 'pending': return Colors.orange;
@@ -819,10 +815,10 @@ class _DashboardCommercantState extends State<DashboardCommercant> {
       switch (order.status) {
         case 'pending': return localizations.pending;
         case 'confirmed': return localizations.confirmed;
-        case 'preparing': return 'En préparation';
-        case 'delivering': return 'En livraison';
+        case 'preparing': return localizations.preparing;
+        case 'delivering': return localizations.delivering;
         case 'delivered': return localizations.delivered;
-        case 'cancelled': return 'Annulée';
+        case 'cancelled': return localizations.cancelled;
         default: return order.status;
       }
     }
@@ -896,7 +892,7 @@ class _DashboardCommercantState extends State<DashboardCommercant> {
                     const SizedBox(width: 4),
                     Expanded(
                       child: Text(
-                        order.supplierName ?? 'Fournisseur',
+                        order.supplierName ?? localizations.supplier,
                         style: const TextStyle(
                           fontSize: 12,
                           color: Color(0xFF2D3A4F),
@@ -909,7 +905,7 @@ class _DashboardCommercantState extends State<DashboardCommercant> {
                 ),
               ),
               Text(
-                '${order.items?.length ?? 0} article(s)',
+                '${order.items?.length ?? 0} ${localizations.itemsCount}',
                 style: const TextStyle(
                   fontSize: 11,
                   color: Color(0xFF8A9AA8),

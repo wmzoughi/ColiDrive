@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../services/cart_service.dart';
 import '../../services/order_service.dart';
 import '../../services/auth_service.dart';
+import '../../services/payment_service.dart'; // 👈 AJOUTER CET IMPORT
 import '../../models/order_request.dart';
 import '../../utils/constants.dart';
 import '../../widgets/bottom_nav_bar.dart';
@@ -45,9 +46,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final authService = Provider.of<AuthService>(context, listen: false);
       final user = authService.currentUser;
-
-      // Vous pouvez pré-remplir ici si vous avez ces informations dans User
-      // _phoneController.text = user?.phone ?? '';
+      if (user?.phone != null && user!.phone!.isNotEmpty) {
+        _phoneController.text = user.phone!;
+      }
     });
   }
 
@@ -60,11 +61,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
     final orderService = Provider.of<OrderService>(context, listen: false);
     final cartService = Provider.of<CartService>(context, listen: false);
+    final authService = Provider.of<AuthService>(context, listen: false);
     final localizations = AppLocalizations.of(context)!;
 
     if (cartService.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+        const SnackBar(
           content: Text('Votre panier est vide'),
           backgroundColor: Colors.red,
         ),
@@ -82,21 +84,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       paymentMethod: _selectedPaymentMethod,
     );
 
+    // 1. Créer la commande
     final result = await orderService.createOrder(orderRequest);
 
-    setState(() => _isLoading = false);
-
-    if (result['success']) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${localizations.orderSuccess} ${result['order_number']}'),
-            backgroundColor: Colors.green,
-          ),
-        );
-        Navigator.pushReplacementNamed(context, '/merchant/orders');
-      }
-    } else {
+    if (!result['success']) {
+      setState(() => _isLoading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -104,6 +96,92 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             backgroundColor: Colors.red,
           ),
         );
+      }
+      return;
+    }
+
+    // ✅ Récupérer les commandes créées (liste ou unique)
+    List<dynamic> createdOrders = [];
+    if (result['orders'] != null) {
+      createdOrders = result['orders'] as List;
+    } else if (result['order'] != null) {
+      createdOrders = [result['order']];
+    }
+
+    // Si paiement par carte, traiter le paiement Stripe
+    if (_selectedPaymentMethod == 'card') {
+      final paymentService = PaymentService(authService);
+
+      // ✅ Pour les commandes multiples (plusieurs fournisseurs)
+      // On paie la première commande comme exemple, ou on peut implémenter un paiement groupé
+      if (createdOrders.isNotEmpty) {
+        final paymentResult = await paymentService.payWithStripe(createdOrders.first.id);
+
+        setState(() => _isLoading = false);
+
+        if (paymentResult['success']) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('✅ ${localizations.orderSuccess} - Paiement confirmé'),
+                backgroundColor: Colors.green,
+              ),
+            );
+
+            // Afficher un message sur les commandes créées
+            if (createdOrders.length > 1) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('${createdOrders.length} commandes créées (une par fournisseur)'),
+                  backgroundColor: Colors.blue,
+                  duration: const Duration(seconds: 3),
+                ),
+              );
+            }
+
+            Navigator.pushReplacementNamed(context, '/merchant/orders');
+          }
+        } else {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('❌ Erreur paiement: ${paymentResult['message']}'),
+                backgroundColor: Colors.red,
+                duration: const Duration(seconds: 5),
+              ),
+            );
+            // La commande est créée mais non payée, on reste sur la page
+          }
+        }
+      } else {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Erreur: aucune commande créée'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } else {
+      // ✅ Paiement à la livraison (COD)
+      setState(() => _isLoading = false);
+
+      if (mounted) {
+        String successMessage = localizations.orderSuccess;
+        if (createdOrders.isNotEmpty) {
+          successMessage = '${localizations.orderSuccess} ${createdOrders.first.orderNumber}';
+        }
+        if (createdOrders.length > 1) {
+          successMessage = '${createdOrders.length} commandes créées avec succès (une par fournisseur)';
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(successMessage),
+            backgroundColor: Colors.green,
+          ),
+        );
+        Navigator.pushReplacementNamed(context, '/merchant/orders');
       }
     }
   }
@@ -116,6 +194,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     final user = authService.currentUser;
     final summary = cartService.getCheckoutSummary();
     final isArabic = Localizations.localeOf(context).languageCode == 'ar';
+
+    // ✅ Récupérer le nombre de fournisseurs
+    final supplierCount = cartService.supplierCount;
 
     return Directionality(
       textDirection: isArabic ? TextDirection.rtl : TextDirection.ltr,
@@ -146,6 +227,34 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // ✅ Avertissement multi-fournisseurs
+                if (supplierCount > 1)
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 16),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.orange.shade200),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.info_outline, color: Colors.orange.shade700),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            '💡 Votre commande sera divisée en $supplierCount commandes distinctes (une par fournisseur)',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.orange.shade700,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
                 // Récapitulatif
                 Card(
                   elevation: 2,
@@ -189,8 +298,31 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         _buildSummaryRow(localizations.tax,
                             summary['tax']!, localizations),
                         const SizedBox(height: 8),
-                        _buildSummaryRow(localizations.shipping,
-                            summary['shipping']!, localizations),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Frais de livraison',
+                              style: const TextStyle(color: Color(0xFF8A9AA8)),
+                            ),
+                            Text(
+                              '${(summary['shipping'] ?? 0).toStringAsFixed(2)} ${localizations.currency}',
+                              style: const TextStyle(fontWeight: FontWeight.w500),
+                            ),
+                          ],
+                        ),
+                        if (supplierCount > 1)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 4),
+                            child: Text(
+                              '($supplierCount x 50 MAD)',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: Colors.grey.shade500,
+                              ),
+                              textAlign: TextAlign.right,
+                            ),
+                          ),
                         const Divider(height: 24),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -394,7 +526,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                             children: [
                               RadioListTile<String>(
                                 title: Text(localizations.cashOnDelivery),
-                                subtitle: Text(localizations.cashSubtitle),
+                                subtitle: Text('+15 MAD de frais de gestion'),
                                 value: 'cash',
                                 groupValue: _selectedPaymentMethod,
                                 onChanged: (value) {
@@ -407,7 +539,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                               const Divider(height: 0, indent: 16, endIndent: 16),
                               RadioListTile<String>(
                                 title: Text(localizations.cardPayment),
-                                subtitle: Text(localizations.cardSubtitle),
+                                subtitle: Text('Paiement sécurisé par carte bancaire'),
                                 value: 'card',
                                 groupValue: _selectedPaymentMethod,
                                 onChanged: (value) {
@@ -420,6 +552,33 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                             ],
                           ),
                         ),
+
+                        const SizedBox(height: 12),
+
+                        // ✅ Informations sur le paiement
+                        if (_selectedPaymentMethod == 'card')
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.blue.shade50,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(Icons.security, color: Colors.blue.shade700, size: 16),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'Paiement sécurisé par Stripe. Aucune information bancaire n\'est stockée.',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.blue.shade700,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                       ],
                     ),
                   ),
@@ -490,7 +649,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       ),
                     )
                         : Text(
-                      localizations.confirmOrder,
+                      _selectedPaymentMethod == 'card'
+                          ? 'Payer ${summary['total']!.toStringAsFixed(2)} MAD'
+                          : localizations.confirmOrder,
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,

@@ -36,10 +36,9 @@ class CompteScreenM extends StatelessWidget {
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
-          NotificationIcon(color: const Color(0xFF2D3A4F)), // 👈 AJOUTEZ ICI
+          NotificationIcon(color: const Color(0xFF2D3A4F)),
         ],
       ),
-
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -81,7 +80,7 @@ class CompteScreenM extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    user?.name ?? 'Commerçant',
+                    user?.name ?? localizations.merchant,
                     style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
@@ -103,8 +102,8 @@ class CompteScreenM extends StatelessWidget {
                       color: AppColors.primary.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(20),
                     ),
-                    child: const Text(
-                      'Commerçant',
+                    child: Text(
+                      localizations.merchant,
                       style: TextStyle(
                         color: AppColors.primary,
                         fontWeight: FontWeight.w600,
@@ -147,19 +146,22 @@ class CompteScreenM extends StatelessWidget {
                   _buildInfoRow(
                     icon: Icons.person_outline,
                     label: localizations.fullName,
-                    value: user?.name ?? localizations.company,
+                    value: user?.name ?? localizations.notProvided,
+                    localizations: localizations,
                   ),
                   _buildDivider(),
                   _buildInfoRow(
                     icon: Icons.email_outlined,
                     label: localizations.email,
-                    value: user?.email ?? localizations.company,
+                    value: user?.email ?? localizations.notProvided,
+                    localizations: localizations,
                   ),
                   _buildDivider(),
                   _buildInfoRow(
                     icon: Icons.phone_outlined,
                     label: localizations.phone,
-                    value: user?.phone ?? localizations.company,
+                    value: user?.phone ?? localizations.notProvided,
+                    localizations: localizations,
                   ),
                 ],
               ),
@@ -196,14 +198,16 @@ class CompteScreenM extends StatelessWidget {
                   _buildInfoRow(
                     icon: Icons.business_outlined,
                     label: localizations.companyName,
-                    value: user?.companyName ?? localizations.company,
+                    value: user?.companyName ?? localizations.notProvided,
+                    localizations: localizations,
                   ),
                   if (user?.siret != null) ...[
                     _buildDivider(),
                     _buildInfoRow(
                       icon: Icons.badge_outlined,
-                      label: 'SIRET',
-                      value: user?.siret ?? localizations.company,
+                      label: localizations.siret,
+                      value: user?.siret ?? localizations.notProvided,
+                      localizations: localizations,
                     ),
                   ],
                 ],
@@ -229,9 +233,9 @@ class CompteScreenM extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Crédit',
-                    style: TextStyle(
+                  Text(
+                    localizations.credit,
+                    style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                       color: Color(0xFF2D3A4F),
@@ -371,7 +375,7 @@ class CompteScreenM extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: () => _showLogoutDialog(context, authService),
+                onPressed: () => _showLogoutDialog(context, authService, localizations),
                 icon: const Icon(Icons.logout),
                 label: Text(localizations.logout),
                 style: ElevatedButton.styleFrom(
@@ -423,6 +427,7 @@ class CompteScreenM extends StatelessWidget {
     required IconData icon,
     required String label,
     required String value,
+    required AppLocalizations localizations,
   }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
@@ -546,9 +551,7 @@ class CompteScreenM extends StatelessWidget {
     );
   }
 
-  void _showLogoutDialog(BuildContext context, AuthService authService) {
-    final localizations = AppLocalizations.of(context)!;
-
+  void _showLogoutDialog(BuildContext context, AuthService authService, AppLocalizations localizations) {
     showDialog(
       context: context,
       builder: (BuildContext dialogContext) {

@@ -60,7 +60,7 @@ class NotificationService extends ChangeNotifier {
       final response = await http.get(
         Uri.parse('${AppConstants.baseUrl}/notifications/unread-count'),
         headers: _headers,
-      );
+      ).timeout(const Duration(seconds: 10));
 
       final data = json.decode(response.body);
 

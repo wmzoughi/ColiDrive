@@ -119,7 +119,7 @@ abstract class AppLocalizations {
   /// No description provided for @email.
   ///
   /// In fr, this message translates to:
-  /// **'Email'**
+  /// **'E-mail'**
   String get email;
 
   /// No description provided for @password.
@@ -215,13 +215,13 @@ abstract class AppLocalizations {
   /// No description provided for @paid.
   ///
   /// In fr, this message translates to:
-  /// **'Payée'**
+  /// **'Payé'**
   String get paid;
 
   /// No description provided for @unpaid.
   ///
   /// In fr, this message translates to:
-  /// **'Impayée'**
+  /// **'Impayé'**
   String get unpaid;
 
   /// No description provided for @myAccount.
@@ -299,7 +299,7 @@ abstract class AppLocalizations {
   /// No description provided for @totalOrders.
   ///
   /// In fr, this message translates to:
-  /// **'Nombre de commandes'**
+  /// **'Total commandes'**
   String get totalOrders;
 
   /// No description provided for @pendingOrders.
@@ -755,7 +755,7 @@ abstract class AppLocalizations {
   /// No description provided for @shipping.
   ///
   /// In fr, this message translates to:
-  /// **'Livraison'**
+  /// **'Frais de livraison'**
   String get shipping;
 
   /// No description provided for @total.
@@ -899,7 +899,7 @@ abstract class AppLocalizations {
   /// No description provided for @confirmed.
   ///
   /// In fr, this message translates to:
-  /// **'Confirmée'**
+  /// **'Confirmées'**
   String get confirmed;
 
   /// No description provided for @preparing.
@@ -917,7 +917,7 @@ abstract class AppLocalizations {
   /// No description provided for @cancelled.
   ///
   /// In fr, this message translates to:
-  /// **'Annulée'**
+  /// **'Annulées'**
   String get cancelled;
 
   /// No description provided for @filterPreparing.
@@ -1082,41 +1082,647 @@ abstract class AppLocalizations {
   /// **'Bientôt épuisé'**
   String get soonOut;
 
+  /// No description provided for @codeSentTo.
+  ///
+  /// In fr, this message translates to:
+  /// **'Code envoyé à'**
+  String get codeSentTo;
+
+  /// No description provided for @invalidCode.
+  ///
+  /// In fr, this message translates to:
+  /// **'Code invalide'**
+  String get invalidCode;
+
+  /// No description provided for @newCodeSent.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nouveau code envoyé'**
+  String get newCodeSent;
+
+  /// No description provided for @verification.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vérification'**
+  String get verification;
+
+  /// No description provided for @passwordMinLength.
+  ///
+  /// In fr, this message translates to:
+  /// **'Minimum 8 caractères'**
+  String get passwordMinLength;
+
+  /// No description provided for @passwordsDoNotMatch.
+  ///
+  /// In fr, this message translates to:
+  /// **'Les mots de passe ne correspondent pas'**
+  String get passwordsDoNotMatch;
+
+  /// No description provided for @codeNotReceived.
+  ///
+  /// In fr, this message translates to:
+  /// **'Code non reçu ?'**
+  String get codeNotReceived;
+
+  /// No description provided for @resendCode.
+  ///
+  /// In fr, this message translates to:
+  /// **'Renvoyer'**
+  String get resendCode;
+
+  /// No description provided for @resendIn.
+  ///
+  /// In fr, this message translates to:
+  /// **'Renvoyer dans'**
+  String get resendIn;
+
+  /// No description provided for @seconds.
+  ///
+  /// In fr, this message translates to:
+  /// **'s'**
+  String get seconds;
+
+  /// No description provided for @merchant.
+  ///
+  /// In fr, this message translates to:
+  /// **'Commerçant'**
+  String get merchant;
+
+  /// No description provided for @supplier.
+  ///
+  /// In fr, this message translates to:
+  /// **'Fournisseur'**
+  String get supplier;
+
+  /// No description provided for @siret.
+  ///
+  /// In fr, this message translates to:
+  /// **'SIRET'**
+  String get siret;
+
+  /// No description provided for @siretHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'14 chiffres'**
+  String get siretHint;
+
+  /// No description provided for @siretInvalid.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le SIRET doit contenir 14 chiffres'**
+  String get siretInvalid;
+
+  /// No description provided for @acceptTerms.
+  ///
+  /// In fr, this message translates to:
+  /// **'J\'accepte les conditions d\'utilisation'**
+  String get acceptTerms;
+
+  /// No description provided for @acceptTermsError.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous devez accepter les conditions'**
+  String get acceptTermsError;
+
+  /// No description provided for @continueText.
+  ///
+  /// In fr, this message translates to:
+  /// **'Continuer'**
+  String get continueText;
+
+  /// No description provided for @alreadyHaveAccount.
+  ///
+  /// In fr, this message translates to:
+  /// **'Déjà un compte ? '**
+  String get alreadyHaveAccount;
+
+  /// No description provided for @checkYourEmail.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vérifiez votre email'**
+  String get checkYourEmail;
+
+  /// No description provided for @codeSentDescription.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nous avons envoyé un code à 6 chiffres à'**
+  String get codeSentDescription;
+
+  /// No description provided for @verify.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vérifier'**
+  String get verify;
+
+  /// No description provided for @registrationSuccess.
+  ///
+  /// In fr, this message translates to:
+  /// **'Inscription réussie ! Vous pouvez maintenant vous connecter'**
+  String get registrationSuccess;
+
+  /// No description provided for @newPassword.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nouveau mot de passe'**
+  String get newPassword;
+
+  /// No description provided for @sendCode.
+  ///
+  /// In fr, this message translates to:
+  /// **'Envoyer le code'**
+  String get sendCode;
+
+  /// No description provided for @passwordResetSuccess.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mot de passe modifié avec succès'**
+  String get passwordResetSuccess;
+
+  /// No description provided for @notProvided.
+  ///
+  /// In fr, this message translates to:
+  /// **'Non renseigné'**
+  String get notProvided;
+
+  /// No description provided for @readyToShop.
+  ///
+  /// In fr, this message translates to:
+  /// **'Prêt à faire vos achats ?'**
+  String get readyToShop;
+
+  /// No description provided for @ourSuppliers.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nos fournisseurs'**
+  String get ourSuppliers;
+
+  /// No description provided for @clickOnSupplier.
+  ///
+  /// In fr, this message translates to:
+  /// **'👆 Cliquez sur un fournisseur pour voir ses produits'**
+  String get clickOnSupplier;
+
+  /// No description provided for @promoDescription.
+  ///
+  /// In fr, this message translates to:
+  /// **'Jusqu\'à -50% sur une sélection de produits'**
+  String get promoDescription;
+
+  /// No description provided for @healthHigh.
+  ///
+  /// In fr, this message translates to:
+  /// **'⚠️ Élevé'**
+  String get healthHigh;
+
+  /// No description provided for @healthHealthy.
+  ///
+  /// In fr, this message translates to:
+  /// **'✅ Sain'**
+  String get healthHealthy;
+
+  /// No description provided for @addedToCart.
+  ///
+  /// In fr, this message translates to:
+  /// **'ajouté au panier'**
+  String get addedToCart;
+
+  /// No description provided for @partnersAvailable.
+  ///
+  /// In fr, this message translates to:
+  /// **'partenaires disponibles'**
+  String get partnersAvailable;
+
+  /// No description provided for @discoverOurSuppliers.
+  ///
+  /// In fr, this message translates to:
+  /// **'Découvrez nos fournisseurs'**
+  String get discoverOurSuppliers;
+
+  /// No description provided for @supplierPartners.
+  ///
+  /// In fr, this message translates to:
+  /// **'fournisseurs partenaires'**
+  String get supplierPartners;
+
+  /// No description provided for @visitShop.
+  ///
+  /// In fr, this message translates to:
+  /// **'Voir boutique'**
+  String get visitShop;
+
+  /// No description provided for @noSuppliersAvailable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun fournisseur disponible'**
+  String get noSuppliersAvailable;
+
+  /// No description provided for @suppliersWillAppearHere.
+  ///
+  /// In fr, this message translates to:
+  /// **'Les fournisseurs apparaîtront ici\nune fois qu\'ils seront disponibles'**
+  String get suppliersWillAppearHere;
+
+  /// No description provided for @refresh.
+  ///
+  /// In fr, this message translates to:
+  /// **'Rafraîchir'**
+  String get refresh;
+
+  /// No description provided for @choosePackaging.
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisissez votre conditionnement'**
+  String get choosePackaging;
+
+  /// No description provided for @noPackagingAvailable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun conditionnement disponible. Achat à l\'unité.'**
+  String get noPackagingAvailable;
+
+  /// No description provided for @unitPiece.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pièce unitaire (1 pièce)'**
+  String get unitPiece;
+
+  /// No description provided for @saveByBuying.
+  ///
+  /// In fr, this message translates to:
+  /// **'Économisez en achetant par'**
+  String get saveByBuying;
+
+  /// No description provided for @totalPieces.
+  ///
+  /// In fr, this message translates to:
+  /// **'Soit'**
+  String get totalPieces;
+
+  /// No description provided for @pieces.
+  ///
+  /// In fr, this message translates to:
+  /// **'pièces'**
+  String get pieces;
+
+  /// No description provided for @productUnavailable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Produit indisponible'**
+  String get productUnavailable;
+
+  /// No description provided for @insufficientStock.
+  ///
+  /// In fr, this message translates to:
+  /// **'Stock insuffisant'**
+  String get insufficientStock;
+
+  /// No description provided for @stockAvailable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Stock disponible'**
+  String get stockAvailable;
+
+  /// No description provided for @onlyLeft.
+  ///
+  /// In fr, this message translates to:
+  /// **'Plus que'**
+  String get onlyLeft;
+
+  /// No description provided for @unavailable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Indisponible'**
+  String get unavailable;
+
+  /// No description provided for @myCart.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mon Panier'**
+  String get myCart;
+
+  /// No description provided for @suppliersInCart.
+  ///
+  /// In fr, this message translates to:
+  /// **'fournisseurs dans votre panier'**
+  String get suppliersInCart;
+
+  /// No description provided for @oneSupplierInCart.
+  ///
+  /// In fr, this message translates to:
+  /// **'1 fournisseur dans votre panier'**
+  String get oneSupplierInCart;
+
+  /// No description provided for @emptyCart.
+  ///
+  /// In fr, this message translates to:
+  /// **'Votre panier est vide'**
+  String get emptyCart;
+
+  /// No description provided for @discoverShops.
+  ///
+  /// In fr, this message translates to:
+  /// **'Découvrez nos boutiques et ajoutez des produits'**
+  String get discoverShops;
+
+  /// No description provided for @discoverShopsButton.
+  ///
+  /// In fr, this message translates to:
+  /// **'Découvrir les produits'**
+  String get discoverShopsButton;
+
+  /// No description provided for @articleCount.
+  ///
+  /// In fr, this message translates to:
+  /// **'article(s)'**
+  String get articleCount;
+
+  /// No description provided for @placeOrder.
+  ///
+  /// In fr, this message translates to:
+  /// **'Passer la commande'**
+  String get placeOrder;
+
+  /// No description provided for @suppliersCount.
+  ///
+  /// In fr, this message translates to:
+  /// **'fournisseurs'**
+  String get suppliersCount;
+
+  /// No description provided for @oneSupplier.
+  ///
+  /// In fr, this message translates to:
+  /// **'1 fournisseur'**
+  String get oneSupplier;
+
+  /// No description provided for @orderSplitMessage.
+  ///
+  /// In fr, this message translates to:
+  /// **'Votre commande sera divisée en'**
+  String get orderSplitMessage;
+
+  /// No description provided for @orderSplitMessageEnd.
+  ///
+  /// In fr, this message translates to:
+  /// **'commandes distinctes (une par fournisseur)'**
+  String get orderSplitMessageEnd;
+
+  /// No description provided for @credit.
+  ///
+  /// In fr, this message translates to:
+  /// **'Crédit'**
+  String get credit;
+
+  /// No description provided for @addReview.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter un avis'**
+  String get addReview;
+
+  /// No description provided for @editReview.
+  ///
+  /// In fr, this message translates to:
+  /// **'Modifier votre avis'**
+  String get editReview;
+
+  /// No description provided for @yourRating.
+  ///
+  /// In fr, this message translates to:
+  /// **'Votre note'**
+  String get yourRating;
+
+  /// No description provided for @tapToRate.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tapez pour noter'**
+  String get tapToRate;
+
+  /// No description provided for @youRated.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous avez noté %d étoile'**
+  String get youRated;
+
+  /// No description provided for @yourCommentOptional.
+  ///
+  /// In fr, this message translates to:
+  /// **'Votre commentaire (optionnel)'**
+  String get yourCommentOptional;
+
+  /// No description provided for @commentHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Partagez votre expérience...'**
+  String get commentHint;
+
+  /// No description provided for @publishAnonymously.
+  ///
+  /// In fr, this message translates to:
+  /// **'Publier anonymement'**
+  String get publishAnonymously;
+
+  /// No description provided for @yourNameWillNotAppear.
+  ///
+  /// In fr, this message translates to:
+  /// **'Votre nom n\'apparaîtra pas'**
+  String get yourNameWillNotAppear;
+
+  /// No description provided for @publishReview.
+  ///
+  /// In fr, this message translates to:
+  /// **'Publier mon avis'**
+  String get publishReview;
+
+  /// No description provided for @updateReview.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mettre à jour'**
+  String get updateReview;
+
+  /// No description provided for @selectRatingError.
+  ///
+  /// In fr, this message translates to:
+  /// **'Veuillez sélectionner une note'**
+  String get selectRatingError;
+
+  /// No description provided for @deleteReviewTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Supprimer l\'avis'**
+  String get deleteReviewTitle;
+
+  /// No description provided for @deleteReviewConfirm.
+  ///
+  /// In fr, this message translates to:
+  /// **'Voulez-vous vraiment supprimer votre avis ?'**
+  String get deleteReviewConfirm;
+
+  /// No description provided for @delete.
+  ///
+  /// In fr, this message translates to:
+  /// **'Supprimer'**
+  String get delete;
+
+  /// No description provided for @reviewDeleted.
+  ///
+  /// In fr, this message translates to:
+  /// **'Avis supprimé'**
+  String get reviewDeleted;
+
+  /// No description provided for @star.
+  ///
+  /// In fr, this message translates to:
+  /// **'étoile'**
+  String get star;
+
+  /// No description provided for @stars.
+  ///
+  /// In fr, this message translates to:
+  /// **'étoiles'**
+  String get stars;
+
+  /// No description provided for @scanResult.
+  ///
+  /// In fr, this message translates to:
+  /// **'Résultat du scan'**
+  String get scanResult;
+
+  /// No description provided for @productNotFound.
+  ///
+  /// In fr, this message translates to:
+  /// **'Produit non trouvé'**
+  String get productNotFound;
+
+  /// No description provided for @checkBarcodeAndRetry.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vérifiez le code-barres et réessayez'**
+  String get checkBarcodeAndRetry;
+
+  /// No description provided for @scanAgain.
+  ///
+  /// In fr, this message translates to:
+  /// **'Scanner à nouveau'**
+  String get scanAgain;
+
+  /// No description provided for @scannedProduct.
+  ///
+  /// In fr, this message translates to:
+  /// **'Produit scanné'**
+  String get scannedProduct;
+
+  /// No description provided for @code.
+  ///
+  /// In fr, this message translates to:
+  /// **'Code'**
+  String get code;
+
+  /// No description provided for @compareOffers.
+  ///
+  /// In fr, this message translates to:
+  /// **'Comparer les offres'**
+  String get compareOffers;
+
+  /// No description provided for @delivery.
+  ///
+  /// In fr, this message translates to:
+  /// **'Livraison'**
+  String get delivery;
+
+  /// No description provided for @addingInProgress.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajout en cours...'**
+  String get addingInProgress;
+
+  /// No description provided for @productCount.
+  ///
+  /// In fr, this message translates to:
+  /// **'%d produits'**
+  String get productCount;
+
+  /// No description provided for @cartWithCount.
+  ///
+  /// In fr, this message translates to:
+  /// **'Panier%s'**
+  String get cartWithCount;
+
+  /// No description provided for @product.
+  ///
+  /// In fr, this message translates to:
+  /// **'produit'**
+  String get product;
+
+  /// No description provided for @reviews.
+  ///
+  /// In fr, this message translates to:
+  /// **'avis'**
+  String get reviews;
+
+  /// No description provided for @review.
+  ///
+  /// In fr, this message translates to:
+  /// **'avis'**
+  String get review;
+
+  /// No description provided for @reviewsOnThisProduct.
+  ///
+  /// In fr, this message translates to:
+  /// **'Avis sur ce produit'**
+  String get reviewsOnThisProduct;
+
+  /// No description provided for @loginRequired.
+  ///
+  /// In fr, this message translates to:
+  /// **'Connexion requise'**
+  String get loginRequired;
+
+  /// No description provided for @loginRequiredMessage.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous devez être connecté pour laisser un avis'**
+  String get loginRequiredMessage;
+
+  /// No description provided for @overallRating.
+  ///
+  /// In fr, this message translates to:
+  /// **'Note globale'**
+  String get overallRating;
+
+  /// No description provided for @loadingError.
+  ///
+  /// In fr, this message translates to:
+  /// **'Erreur de chargement'**
+  String get loadingError;
+
+  /// No description provided for @retry.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réessayer'**
+  String get retry;
+
   /// No description provided for @invoices.
   ///
   /// In fr, this message translates to:
   /// **'Mes factures'**
   String get invoices;
 
-  /// No description provided for @invoice.
+  /// No description provided for @filter_this_month.
   ///
   /// In fr, this message translates to:
-  /// **'Facture'**
-  String get invoice;
+  /// **'Ce mois'**
+  String get filter_this_month;
 
-  /// No description provided for @invoice_number.
+  /// No description provided for @filter_last_month.
   ///
   /// In fr, this message translates to:
-  /// **'N° Facture'**
-  String get invoice_number;
+  /// **'Mois dernier'**
+  String get filter_last_month;
 
-  /// No description provided for @invoice_date.
+  /// No description provided for @total_invoiced.
   ///
   /// In fr, this message translates to:
-  /// **'Date'**
-  String get invoice_date;
-
-  /// No description provided for @invoice_total.
-  ///
-  /// In fr, this message translates to:
-  /// **'Total'**
-  String get invoice_total;
-
-  /// No description provided for @invoice_status.
-  ///
-  /// In fr, this message translates to:
-  /// **'Statut'**
-  String get invoice_status;
+  /// **'Total facturé'**
+  String get total_invoiced;
 
   /// No description provided for @invoice_paid.
   ///
@@ -1130,6 +1736,24 @@ abstract class AppLocalizations {
   /// **'En attente'**
   String get invoice_pending;
 
+  /// No description provided for @invoice_date.
+  ///
+  /// In fr, this message translates to:
+  /// **'Date'**
+  String get invoice_date;
+
+  /// No description provided for @invoice_customer.
+  ///
+  /// In fr, this message translates to:
+  /// **'Client'**
+  String get invoice_customer;
+
+  /// No description provided for @invoice_total.
+  ///
+  /// In fr, this message translates to:
+  /// **'Total'**
+  String get invoice_total;
+
   /// No description provided for @invoice_download.
   ///
   /// In fr, this message translates to:
@@ -1139,68 +1763,68 @@ abstract class AppLocalizations {
   /// No description provided for @invoice_details.
   ///
   /// In fr, this message translates to:
-  /// **'Détails'**
+  /// **'Détail facture'**
   String get invoice_details;
 
-  /// No description provided for @invoice_customer.
+  /// No description provided for @invoice_no_invoices.
   ///
   /// In fr, this message translates to:
-  /// **'Client'**
-  String get invoice_customer;
+  /// **'Aucune facture'**
+  String get invoice_no_invoices;
 
-  /// No description provided for @invoice_company.
+  /// No description provided for @invoice_no_invoices_desc.
   ///
   /// In fr, this message translates to:
-  /// **'Société'**
-  String get invoice_company;
+  /// **'Vos factures apparaîtront ici après vos achats'**
+  String get invoice_no_invoices_desc;
 
-  /// No description provided for @invoice_email.
+  /// No description provided for @filter_all.
   ///
   /// In fr, this message translates to:
-  /// **'Email'**
-  String get invoice_email;
+  /// **'Toutes'**
+  String get filter_all;
 
-  /// No description provided for @invoice_phone.
+  /// No description provided for @pdfDownloadSuccess.
   ///
   /// In fr, this message translates to:
-  /// **'Téléphone'**
-  String get invoice_phone;
+  /// **'PDF téléchargé avec succès'**
+  String get pdfDownloadSuccess;
 
-  /// No description provided for @invoice_address.
+  /// No description provided for @pdfDownloadError.
   ///
   /// In fr, this message translates to:
-  /// **'Adresse'**
-  String get invoice_address;
+  /// **'Erreur lors du téléchargement du PDF'**
+  String get pdfDownloadError;
 
-  /// No description provided for @invoice_city.
+  /// No description provided for @pdfReadyToShare.
   ///
   /// In fr, this message translates to:
-  /// **'Ville'**
-  String get invoice_city;
+  /// **'PDF prêt à être partagé'**
+  String get pdfReadyToShare;
 
-  /// No description provided for @invoice_zip.
+  /// No description provided for @pdfShareError.
   ///
   /// In fr, this message translates to:
-  /// **'Code postal'**
-  String get invoice_zip;
+  /// **'Erreur lors du partage du PDF'**
+  String get pdfShareError;
 
-  /// No description provided for @invoice_items.
+  /// No description provided for @path.
   ///
   /// In fr, this message translates to:
-  /// **'Articles'**
-  String get invoice_items;
+  /// **'Chemin'**
+  String get path;
 
-  /// No description provided for @invoice_quantity.
+  /// No description provided for @open.
   ///
   /// In fr, this message translates to:
-  /// **'Qté'**
-  String get invoice_quantity;
+  /// **'OUVRIR'**
+  String get open;
 
-  /// No description provided for @invoice_price.
+  /// No description provided for @reference.
   ///
   /// In fr, this message translates to:
-  /// **'Prix'**
-  String get invoice_price;
+  /// **'Réf'**
+  String get reference;
 
   /// No description provided for @invoice_subtotal.
   ///
@@ -1226,96 +1850,6 @@ abstract class AppLocalizations {
   /// **'Total TTC'**
   String get invoice_grand_total;
 
-  /// No description provided for @invoice_payment_method.
-  ///
-  /// In fr, this message translates to:
-  /// **'Mode de paiement'**
-  String get invoice_payment_method;
-
-  /// No description provided for @invoice_cash.
-  ///
-  /// In fr, this message translates to:
-  /// **'Espèces'**
-  String get invoice_cash;
-
-  /// No description provided for @invoice_card.
-  ///
-  /// In fr, this message translates to:
-  /// **'Carte'**
-  String get invoice_card;
-
-  /// No description provided for @invoice_no_invoices.
-  ///
-  /// In fr, this message translates to:
-  /// **'Aucune facture'**
-  String get invoice_no_invoices;
-
-  /// No description provided for @invoice_no_invoices_desc.
-  ///
-  /// In fr, this message translates to:
-  /// **'Vos factures apparaîtront ici après vos achats'**
-  String get invoice_no_invoices_desc;
-
-  /// No description provided for @due_date.
-  ///
-  /// In fr, this message translates to:
-  /// **'Date d\'échéance'**
-  String get due_date;
-
-  /// No description provided for @billed_to.
-  ///
-  /// In fr, this message translates to:
-  /// **'Facturé à'**
-  String get billed_to;
-
-  /// No description provided for @customer.
-  ///
-  /// In fr, this message translates to:
-  /// **'Client'**
-  String get customer;
-
-  /// No description provided for @zip_code.
-  ///
-  /// In fr, this message translates to:
-  /// **'Code postal'**
-  String get zip_code;
-
-  /// No description provided for @items.
-  ///
-  /// In fr, this message translates to:
-  /// **'Articles'**
-  String get items;
-
-  /// No description provided for @product.
-  ///
-  /// In fr, this message translates to:
-  /// **'Produit'**
-  String get product;
-
-  /// No description provided for @reference.
-  ///
-  /// In fr, this message translates to:
-  /// **'Référence'**
-  String get reference;
-
-  /// No description provided for @unit_price.
-  ///
-  /// In fr, this message translates to:
-  /// **'Prix unitaire'**
-  String get unit_price;
-
-  /// No description provided for @payment_method.
-  ///
-  /// In fr, this message translates to:
-  /// **'Mode de paiement'**
-  String get payment_method;
-
-  /// No description provided for @payment_status.
-  ///
-  /// In fr, this message translates to:
-  /// **'Statut'**
-  String get payment_status;
-
   /// No description provided for @download_pdf.
   ///
   /// In fr, this message translates to:
@@ -1328,35 +1862,227 @@ abstract class AppLocalizations {
   /// **'Partager'**
   String get share_pdf;
 
-  /// No description provided for @no_invoices.
+  /// No description provided for @invoice_items.
   ///
   /// In fr, this message translates to:
-  /// **'Aucune facture'**
-  String get no_invoices;
+  /// **'Articles'**
+  String get invoice_items;
 
-  /// No description provided for @total_invoiced.
+  /// No description provided for @invoice_quantity.
   ///
   /// In fr, this message translates to:
-  /// **'Total facturé'**
-  String get total_invoiced;
+  /// **'Qté'**
+  String get invoice_quantity;
 
-  /// No description provided for @filter_all.
+  /// No description provided for @invoice_price.
   ///
   /// In fr, this message translates to:
-  /// **'Toutes'**
-  String get filter_all;
+  /// **'Prix'**
+  String get invoice_price;
 
-  /// No description provided for @filter_this_month.
+  /// No description provided for @notifications.
   ///
   /// In fr, this message translates to:
-  /// **'Ce mois'**
-  String get filter_this_month;
+  /// **'Notifications'**
+  String get notifications;
 
-  /// No description provided for @filter_last_month.
+  /// No description provided for @markAllAsRead.
   ///
   /// In fr, this message translates to:
-  /// **'Mois dernier'**
-  String get filter_last_month;
+  /// **'Tout marquer comme lu'**
+  String get markAllAsRead;
+
+  /// No description provided for @deleteNotificationConfirm.
+  ///
+  /// In fr, this message translates to:
+  /// **'Supprimer cette notification ?'**
+  String get deleteNotificationConfirm;
+
+  /// No description provided for @noNewOrders.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune nouvelle commande'**
+  String get noNewOrders;
+
+  /// No description provided for @noNotifications.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune notification'**
+  String get noNotifications;
+
+  /// No description provided for @noOrdersReceived.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous n\'avez pas encore reçu de commandes'**
+  String get noOrdersReceived;
+
+  /// No description provided for @noOrderUpdates.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous n\'avez pas encore de mises à jour sur vos commandes'**
+  String get noOrderUpdates;
+
+  /// No description provided for @packagings.
+  ///
+  /// In fr, this message translates to:
+  /// **'Conditionnements'**
+  String get packagings;
+
+  /// No description provided for @packagingAdded.
+  ///
+  /// In fr, this message translates to:
+  /// **'Conditionnement ajouté'**
+  String get packagingAdded;
+
+  /// No description provided for @packagingUpdated.
+  ///
+  /// In fr, this message translates to:
+  /// **'Conditionnement modifié'**
+  String get packagingUpdated;
+
+  /// No description provided for @packagingDeleted.
+  ///
+  /// In fr, this message translates to:
+  /// **'Conditionnement supprimé'**
+  String get packagingDeleted;
+
+  /// No description provided for @packagingDeleteError.
+  ///
+  /// In fr, this message translates to:
+  /// **'Erreur lors de la suppression'**
+  String get packagingDeleteError;
+
+  /// No description provided for @deletePackagingConfirm.
+  ///
+  /// In fr, this message translates to:
+  /// **'Voulez-vous vraiment supprimer ce conditionnement ?'**
+  String get deletePackagingConfirm;
+
+  /// No description provided for @basicInfo.
+  ///
+  /// In fr, this message translates to:
+  /// **'Informations de base'**
+  String get basicInfo;
+
+  /// No description provided for @baseUnit.
+  ///
+  /// In fr, this message translates to:
+  /// **'Unité de base'**
+  String get baseUnit;
+
+  /// No description provided for @piece.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pièce'**
+  String get piece;
+
+  /// No description provided for @defaultQuantity.
+  ///
+  /// In fr, this message translates to:
+  /// **'Quantité par défaut'**
+  String get defaultQuantity;
+
+  /// No description provided for @unitWeight.
+  ///
+  /// In fr, this message translates to:
+  /// **'Poids unitaire'**
+  String get unitWeight;
+
+  /// No description provided for @unitVolume.
+  ///
+  /// In fr, this message translates to:
+  /// **'Volume unitaire'**
+  String get unitVolume;
+
+  /// No description provided for @noPackagings.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun conditionnement'**
+  String get noPackagings;
+
+  /// No description provided for @addPackagingHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajoutez des conditionnements comme \"Carton\", \"Palette\", etc.'**
+  String get addPackagingHint;
+
+  /// No description provided for @addPackaging.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter un conditionnement'**
+  String get addPackaging;
+
+  /// No description provided for @editPackaging.
+  ///
+  /// In fr, this message translates to:
+  /// **'Modifier le conditionnement'**
+  String get editPackaging;
+
+  /// No description provided for @name.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nom'**
+  String get name;
+
+  /// No description provided for @packagingNameHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ex: Carton, Palette, Pack'**
+  String get packagingNameHint;
+
+  /// No description provided for @type.
+  ///
+  /// In fr, this message translates to:
+  /// **'Type'**
+  String get type;
+
+  /// No description provided for @quantityPieces.
+  ///
+  /// In fr, this message translates to:
+  /// **'Quantité (pièces)'**
+  String get quantityPieces;
+
+  /// No description provided for @quantityHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nombre d\'unités dans ce conditionnement'**
+  String get quantityHint;
+
+  /// No description provided for @priceOptional.
+  ///
+  /// In fr, this message translates to:
+  /// **'Prix (optionnel)'**
+  String get priceOptional;
+
+  /// No description provided for @priceOptionalHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Laisser vide pour utiliser le prix unitaire'**
+  String get priceOptionalHint;
+
+  /// No description provided for @barcodeOptional.
+  ///
+  /// In fr, this message translates to:
+  /// **'Code-barres (optionnel)'**
+  String get barcodeOptional;
+
+  /// No description provided for @defaultPackaging.
+  ///
+  /// In fr, this message translates to:
+  /// **'Conditionnement par défaut'**
+  String get defaultPackaging;
+
+  /// No description provided for @edit.
+  ///
+  /// In fr, this message translates to:
+  /// **'Modifier'**
+  String get edit;
+
+  /// No description provided for @shops.
+  ///
+  /// In fr, this message translates to:
+  /// **'Boutiques'**
+  String get shops;
 }
 
 class _AppLocalizationsDelegate

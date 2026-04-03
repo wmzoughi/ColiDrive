@@ -45,5 +45,58 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+
+	<!-- ========== CONFIGURATION STRIPE ========== -->
+	<!-- URL Schemes pour le retour Stripe -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.yourcompany.colidrive</string>
+			</array>
+			<key>CFBundleURLName</key>
+			<string>com.yourcompany.colidrive</string>
+		</dict>
+	</array>
+
+	<!-- ========== CONFIGURATION FIREBASE NOTIFICATIONS ========== -->
+	<!-- Désactiver le proxy Firebase pour permettre la gestion manuelle des notifications -->
+	<key>FirebaseAppDelegateProxyEnabled</key>
+	<string>NO</string>
+
+	<!-- Permissions pour les notifications en arrière-plan -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
+		<string>remote-notification</string>
+	</array>
+
+	<!-- ========== PERMISSIONS DIVERSES ========== -->
+	<!-- Permission d'accès à Internet -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+	</dict>
+
+	<!-- Permission de caméra (optionnel, pour scanner des cartes) -->
+	<key>NSCameraUsageDescription</key>
+	<string>Cette application utilise la caméra pour scanner les cartes de paiement</string>
+
+	<!-- Permission de localisation (optionnel, pour la livraison) -->
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Nous utilisons votre position pour faciliter la livraison</string>
+
+	<!-- Permission pour les notifications (iOS 10+) -->
+	<key>NSUserNotificationsUsageDescription</key>
+	<string>Cette application souhaite vous envoyer des notifications pour vous informer de l'état de vos commandes</string>
+
+	<!-- Permission pour les notifications critiques (optionnel) -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
+
 </dict>
 </plist>

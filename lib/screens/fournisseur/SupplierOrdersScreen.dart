@@ -1,4 +1,3 @@
-// lib/screens/fournisseur/orders_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../services/auth_service.dart';
@@ -27,21 +26,16 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
 
   List<String> _filters = [];
 
-  // ✅ ID du fournisseur connecté
   int? get _currentSupplierId {
     final authService = Provider.of<AuthService>(context, listen: false);
     return authService.currentUser?.id;
   }
 
-  // ✅ Filtrer les items du fournisseur
-
   List<OrderItem> _getSupplierItems(Order order) {
-    // Plus besoin de filtrer - la commande contient déjà uniquement les produits du fournisseur
     return order.items ?? [];
   }
-  // ✅ VERSION CORRECTE
+
   double _getSupplierTotal(Order order) {
-    // Le total de la commande est déjà le total pour ce fournisseur
     return order.total;
   }
 
@@ -50,24 +44,30 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final localizations = AppLocalizations.of(context)!;
-      setState(() {
-        _filters = [
-          localizations.filterAll,
-          localizations.filterPending,
-          localizations.filterConfirmed,
-          localizations.filterPreparing,
-          localizations.filterDelivering,
-          localizations.filterDelivered,
-          localizations.filterCancelled,
-        ];
-        _selectedFilter = localizations.filterAll;
+
+      _filters = [
+        localizations.filterAll,
+        localizations.filterPending,
+        localizations.filterConfirmed,
+        localizations.filterPreparing,
+        localizations.filterDelivering,
+        localizations.filterDelivered,
+        localizations.filterCancelled,
+      ];
+      _selectedFilter = localizations.filterAll;
+
+      setState(() {});
+
+      Future.delayed(const Duration(milliseconds: 100), () {
+        _loadOrders();
+        _loadStats();
       });
-      _loadOrders();
-      _loadStats();
     });
   }
 
   Future<void> _loadOrders() async {
+    if (!mounted) return;
+
     setState(() => _isLoading = true);
 
     try {
@@ -89,11 +89,19 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
         status = 'cancelled';
       }
 
-      _orders = await orderService.getMyOrders(status: status);
-      print('📦 Commandes chargées: ${_orders.length}');
+      final orders = await orderService.getMyOrders(status: status);
+
+      if (mounted) {
+        setState(() {
+          _orders = orders;
+          _isLoading = false;
+        });
+        print('📦 Commandes chargées: ${_orders.length}');
+      }
     } catch (e) {
       debugPrint('❌ Error loading orders: $e');
       if (mounted) {
+        setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('${AppLocalizations.of(context)!.errorOccurred}: $e'),
@@ -101,8 +109,6 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
           ),
         );
       }
-    } finally {
-      setState(() => _isLoading = false);
     }
   }
 
@@ -113,15 +119,16 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
 
       print('📊 Stats reçues: $stats');
 
-      setState(() {
-        _stats = stats;
-      });
+      if (mounted) {
+        setState(() {
+          _stats = stats;
+        });
+      }
     } catch (e) {
       debugPrint('❌ Error loading stats: $e');
     }
   }
 
-  // ✅ Méthode pour confirmer une commande
   Future<void> _confirmOrder(Order order) async {
     final localizations = AppLocalizations.of(context)!;
 
@@ -175,7 +182,6 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
     }
   }
 
-  // ✅ Méthode pour passer en préparation
   Future<void> _prepareOrder(Order order) async {
     final localizations = AppLocalizations.of(context)!;
 
@@ -229,7 +235,6 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
     }
   }
 
-  // ✅ Méthode pour démarrer la livraison
   Future<void> _startDelivery(Order order) async {
     final localizations = AppLocalizations.of(context)!;
 
@@ -283,7 +288,6 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
     }
   }
 
-  // ✅ Méthode pour marquer comme livrée
   Future<void> _markAsDelivered(Order order) async {
     final localizations = AppLocalizations.of(context)!;
 
@@ -337,7 +341,6 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
     }
   }
 
-  // ✅ Méthode pour annuler une commande
   Future<void> _cancelOrder(Order order) async {
     final localizations = AppLocalizations.of(context)!;
     final TextEditingController reasonController = TextEditingController();
@@ -642,7 +645,6 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
       ),
       child: Column(
         children: [
-          // Première ligne
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
@@ -670,7 +672,6 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
             ],
           ),
           const SizedBox(height: 12),
-          // Deuxième ligne
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
@@ -730,26 +731,18 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
     );
   }
 
-  // ✅ Carte de commande avec filtrage
   Widget _buildOrderCard(Order order, AppLocalizations localizations, bool isArabic) {
     final supplierItems = _getSupplierItems(order);
     final supplierTotal = _getSupplierTotal(order);
     const int maxDisplayItems = 10;
-    print('🟢 Construction carte pour ${order.orderNumber}');
-    print('   supplierItems.length = ${supplierItems.length}');
-    print('   supplierTotal = $supplierTotal');
 
     if (supplierItems.isEmpty) {
-      print('   ❌ Carte cachée (aucun item)');
       return const SizedBox.shrink();
     }
 
-    print('   ✅ Carte affichée avec ${supplierItems.length} items');
-    if (supplierItems.isEmpty) return const SizedBox.shrink();
-
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -764,7 +757,6 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // En-tête
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -787,7 +779,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
                     order.orderNumber,
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
-                      fontSize: 16,
+                      fontSize: 14,
                       color: Color(0xFF2D3A4F),
                     ),
                   ),
@@ -802,7 +794,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
                 child: Text(
                   _getStatusLabel(order, localizations),
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: 11,
                     color: _getStatusColor(order),
                     fontWeight: FontWeight.w600,
                   ),
@@ -810,46 +802,45 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
 
-          // Client
           Row(
             children: [
-              const Icon(Icons.person_outline, size: 14, color: Color(0xFF8A9AA8)),
+              const Icon(Icons.person_outline, size: 12, color: Color(0xFF8A9AA8)),
               const SizedBox(width: 4),
               Expanded(
                 child: Text(
                   '${localizations.client}: ${order.customerDisplayName}',
                   style: const TextStyle(
-                    fontSize: 13,
+                    fontSize: 12,
                     color: Color(0xFF2D3A4F),
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
 
-          // Date
           Row(
             children: [
-              const Icon(Icons.access_time, size: 14, color: Color(0xFF8A9AA8)),
+              const Icon(Icons.access_time, size: 12, color: Color(0xFF8A9AA8)),
               const SizedBox(width: 4),
               Text(
                 _formatDate(order.createdAt, localizations, isArabic),
                 style: const TextStyle(
-                  fontSize: 12,
+                  fontSize: 11,
                   color: Color(0xFF8A9AA8),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
 
-          // Produits du fournisseur
           ...supplierItems.take(maxDisplayItems).map((item) {
             return Padding(
-              padding: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.only(bottom: 6),
               child: Row(
                 children: [
                   _buildProductImage(item),
@@ -862,14 +853,16 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
                           item.productName,
                           style: const TextStyle(
                             fontWeight: FontWeight.w500,
-                            fontSize: 13,
+                            fontSize: 12,
                             color: Color(0xFF2D3A4F),
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                         Text(
                           '${item.quantity} x ${item.price.toStringAsFixed(2)} ${localizations.currency}',
                           style: const TextStyle(
-                            fontSize: 11,
+                            fontSize: 10,
                             color: Color(0xFF8A9AA8),
                           ),
                         ),
@@ -880,7 +873,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
                     '${item.subtotal.toStringAsFixed(2)} ${localizations.currency}',
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
-                      fontSize: 13,
+                      fontSize: 12,
                       color: AppColors.primary,
                     ),
                   ),
@@ -891,45 +884,52 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
 
           if (supplierItems.length > maxDisplayItems)
             Padding(
-              padding: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.only(bottom: 6),
               child: Text(
                 '+ ${supplierItems.length - maxDisplayItems} ${localizations.moreProducts}',
                 style: const TextStyle(
-                  fontSize: 11,
+                  fontSize: 10,
                   color: Color(0xFF8A9AA8),
                   fontStyle: FontStyle.italic,
                 ),
               ),
             ),
 
-          const Divider(height: 20),
+          const Divider(height: 16),
 
-          // Total et boutons
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Total',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Color(0xFF8A9AA8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Total',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFF8A9AA8),
+                      ),
                     ),
-                  ),
-                  Text(
-                    '${supplierTotal.toStringAsFixed(2)} ${localizations.currency}',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                      color: AppColors.primary,
+                    Text(
+                      '${supplierTotal.toStringAsFixed(2)} ${localizations.currency}',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: AppColors.primary,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-              Row(
-                children: _buildActionButtons(order, localizations, isArabic),
+              Flexible(
+                child: Wrap(
+                  alignment: WrapAlignment.end,
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: _buildActionButtons(order, localizations, isArabic),
+                ),
               ),
             ],
           ),
@@ -950,24 +950,25 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
               foregroundColor: Colors.red,
               side: const BorderSide(color: Colors.red),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(6),
               ),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              minimumSize: const Size(0, 32),
             ),
-            child: Text(localizations.cancel),
+            child: Text(localizations.cancel, style: const TextStyle(fontSize: 12)),
           ),
-          const SizedBox(width: 8),
           ElevatedButton(
             onPressed: () => _confirmOrder(order),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.green,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(6),
               ),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              minimumSize: const Size(0, 32),
             ),
-            child: Text(localizations.confirm),
+            child: Text(localizations.confirm, style: const TextStyle(fontSize: 12)),
           ),
         ];
         break;
@@ -980,24 +981,25 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
               foregroundColor: Colors.red,
               side: const BorderSide(color: Colors.red),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(6),
               ),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              minimumSize: const Size(0, 32),
             ),
-            child: Text(localizations.cancel),
+            child: Text(localizations.cancel, style: const TextStyle(fontSize: 12)),
           ),
-          const SizedBox(width: 8),
           ElevatedButton(
             onPressed: () => _prepareOrder(order),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.blue,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(6),
               ),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              minimumSize: const Size(0, 32),
             ),
-            child: Text(localizations.preparing),
+            child: Text(localizations.preparing, style: const TextStyle(fontSize: 12)),
           ),
         ];
         break;
@@ -1010,11 +1012,12 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
               backgroundColor: Colors.orange,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(6),
               ),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              minimumSize: const Size(0, 32),
             ),
-            child: Text(localizations.delivering),
+            child: Text(localizations.delivering, style: const TextStyle(fontSize: 12)),
           ),
         ];
         break;
@@ -1027,11 +1030,12 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
               backgroundColor: Colors.green,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(6),
               ),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              minimumSize: const Size(0, 32),
             ),
-            child: Text(localizations.delivered),
+            child: Text(localizations.delivered, style: const TextStyle(fontSize: 12)),
           ),
         ];
         break;
@@ -1042,29 +1046,27 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
 
     return buttons;
   }
-// Dans _buildOrderCard, remplacez la partie ProductImage par :
 
   Widget _buildProductImage(OrderItem item) {
-    // Essayer de récupérer l'URL depuis le snapshot
     String? imageUrl = item.productSnapshot?['image_url'];
 
     if (imageUrl != null && imageUrl.isNotEmpty) {
       return ProductImage(
-        imageUrl: imageUrl,  // ← Utiliser l'URL du snapshot
-        width: 40,
-        height: 40,
+        imageUrl: imageUrl,
+        width: 36,
+        height: 36,
         fit: BoxFit.cover,
       );
     } else {
-      // Fallback sur l'ID du produit
       return ProductImage(
         productId: item.productId,
-        width: 40,
-        height: 40,
+        width: 36,
+        height: 36,
         fit: BoxFit.cover,
       );
     }
   }
+
   String _formatDate(DateTime date, AppLocalizations localizations, bool isArabic) {
     final now = DateTime.now();
     final difference = now.difference(date);
